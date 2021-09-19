@@ -33,11 +33,16 @@
 #include	<algorithm>
 #include	<typeinfo>
 
+#ifndef _MSC_VER
 #include	<sys/time.h>
+#include  <alloca.h>
+#endif
 #include	<fcntl.h>
 
 #include	"NGT/defines.h"
 #include	"NGT/SharedMemoryAllocator.h"
+
+#define NGT_ALLOCA(type, count) static_cast<type*>(alloca(sizeof(type) * count))
 
 #define ADVANCED_USE_REMOVED_LIST
 #define	SHARED_REMOVED_LIST
@@ -254,6 +259,7 @@ namespace NGT {
 
 
     static std::string getProcessStatus(const std::string &stat) {
+#ifndef _MSC_VER
       pid_t pid = getpid();
       std::stringstream str;
       str << "/proc/" << pid << "/status";
@@ -273,6 +279,7 @@ namespace NGT {
 	  }
 	}
       }
+#endif
       return "-1";
     }
 
@@ -282,6 +289,16 @@ namespace NGT {
     static int getProcessVmRSS() { return strtol(getProcessStatus("VmRSS")); }
   };
 
+#ifdef _MSC_VER
+  class StdOstreamRedirector {
+  public:
+    StdOstreamRedirector(bool = {}) {}
+    void begin() {}
+    void end() {}
+    void enable() {}
+    void disable() {}
+  };
+#else
   class StdOstreamRedirector {
   public:
     StdOstreamRedirector(bool e = false, const std::string path = "/dev/null", mode_t m = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH, int f = 2) { 
@@ -330,6 +347,7 @@ namespace NGT {
     int		fdNo;
     bool	enabled;
   };
+#endif
 
   template <class TYPE> 
     class CompactVector {
@@ -2120,40 +2138,43 @@ namespace NGT {
 
   class Timer {
   public:
-  Timer():time(0) {}
+  Timer() = default;
+  // :time(0) {}
 
-    void reset() { time = 0; ntime = 0; }
+    void reset() { 
+      // time = 0; ntime = 0; 
+      }
 
     void start() {
-      struct timespec res;
-      clock_getres(CLOCK_REALTIME, &res);
-      reset();
-      clock_gettime(CLOCK_REALTIME, &startTime);
+      // struct timespec res;
+      // clock_getres(CLOCK_REALTIME, &res);
+      // reset();
+      // clock_gettime(CLOCK_REALTIME, &startTime);
     }
 
     void restart() {
-      clock_gettime(CLOCK_REALTIME, &startTime);
+      // clock_gettime(CLOCK_REALTIME, &startTime);
     }
 
     void stop() {
-      clock_gettime(CLOCK_REALTIME, &stopTime);
-      sec = stopTime.tv_sec - startTime.tv_sec;
-      nsec = stopTime.tv_nsec - startTime.tv_nsec;
-      if (nsec < 0) {
-	sec -= 1;
-	nsec += 1000000000L;
-      }
-      time += (double)sec + (double)nsec / 1000000000.0;
-      ntime += sec * 1000000000L + nsec;
+  //     clock_gettime(CLOCK_REALTIME, &stopTime);
+  //     sec = stopTime.tv_sec - startTime.tv_sec;
+  //     nsec = stopTime.tv_nsec - startTime.tv_nsec;
+  //     if (nsec < 0) {
+	// sec -= 1;
+	// nsec += 1000000000L;
+  //     }
+  //     time += (double)sec + (double)nsec / 1000000000.0;
+  //     ntime += sec * 1000000000L + nsec;
     }
 
     friend std::ostream &operator<<(std::ostream &os, Timer &t) {
-      os << std::setprecision(6) << t.time << " (sec)";
+      // os << std::setprecision(6) << t.time << " (sec)";
       return os;
     }
 
-    struct timespec startTime;
-    struct timespec stopTime;
+    // struct timespec startTime;
+    // struct timespec stopTime;
 
     int64_t	sec;
     int64_t	nsec;

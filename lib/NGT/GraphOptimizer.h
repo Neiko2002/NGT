@@ -17,6 +17,8 @@
 #include	"GraphReconstructor.h"
 #include	"Optimizer.h"
 
+#include <filesystem>
+
 namespace NGT {
   class GraphOptimizer {
   public:
@@ -231,7 +233,7 @@ namespace NGT {
 		 const std::string inIndexPath,
 		 const std::string outIndexPath
 		 ){
-      if (access(outIndexPath.c_str(), 0) == 0) {
+      if (std::filesystem::exists(outIndexPath)) {
 	std::stringstream msg;
 	msg << "Optimizer::execute: The specified index exists. " << outIndexPath;
 	NGTThrowException(msg);

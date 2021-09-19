@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <cerrno>
 #include <cstring>
+#include <mutex>
 
 namespace NGT {
   class ObjectSpace;
@@ -47,7 +48,7 @@ class ArrayFile {
   FileHeadStruct _fileHead;
 
   bool _readFileHead();
-  pthread_mutex_t _mutex;
+  std::mutex _mutex;
   
  public:
   ArrayFile();
@@ -68,14 +69,12 @@ class ArrayFile {
 // constructor 
 template <class TYPE>
 ArrayFile<TYPE>::ArrayFile()
-  : _isOpen(false), _mutex((pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER){
-    if(pthread_mutex_init(&_mutex, NULL) < 0) throw std::runtime_error("pthread init error.");
+  : _isOpen(false){
 }
 
 // destructor
 template <class TYPE>
 ArrayFile<TYPE>::~ArrayFile() {
-  pthread_mutex_destroy(&_mutex);
   close();
 }
 
@@ -146,10 +145,9 @@ void ArrayFile<TYPE>::put(const size_t id, TYPE &data, NGT::ObjectSpace *objectS
 
 template <class TYPE>
 bool ArrayFile<TYPE>::get(const size_t id, TYPE &data, NGT::ObjectSpace *objectSpace) {
-  pthread_mutex_lock(&_mutex);
+  std::unique_lock lock{_mutex};
 
   if( size() <= id ){
-    pthread_mutex_unlock(&_mutex);    
     return false;
   }
   
@@ -179,7 +177,6 @@ bool ArrayFile<TYPE>::get(const size_t id, TYPE &data, NGT::ObjectSpace *objectS
     }
   }
 
-  pthread_mutex_unlock(&_mutex);
   return true;
 }
 

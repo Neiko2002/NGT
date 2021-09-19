@@ -17,9 +17,8 @@
 #pragma once
 
 #include	"NGT/defines.h"
-#include	"NGT/MmapManager.h"
+#include	"NGT/MmapManagerDefs.h"
 
-#include	<unistd.h>
 #include	<cstdlib>
 #include	<cstring>
 #include	<string>
@@ -28,8 +27,10 @@
 #include	<exception>
 #include	<cassert>
 
+#ifdef NGT_SHARED_MEMORY_ALLOCATOR
 #define		MMAP_MANAGER
-
+#include	"NGT/MmapManager.h"
+#endif
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -111,8 +112,8 @@ class SharedMemoryAllocator {
     if (msize == 0) {
       msize = NGT_SHARED_MEMORY_MAX_SIZE;
     }
-    size_t bsize = msize * 1048576 / sysconf(_SC_PAGESIZE) + 1; // 1048576=1M
-    uint64_t size = bsize * sysconf(_SC_PAGESIZE);
+    size_t bsize = msize * 1048576 / MemoryManager::SYSTEM_PAGE_SIZE + 1; // 1048576=1M
+    uint64_t size = bsize * MemoryManager::SYSTEM_PAGE_SIZE;
     MemoryManager::init_option_st option;
     MemoryManager::MmapManager::setDefaultOptionValue(option);
     option.use_expand = true;
@@ -185,16 +186,21 @@ class SharedMemoryAllocator {
 #endif
   }
   size_t getMemorySize(GetMemorySizeType t) {
+#ifdef MMAP_MANAGER
     switch (t) {
     case GetTotalMemorySize : 	  return getTotalSize();
     case GetAllocatedMemorySize : return getAllocatedSize();
     case GetFreedMemorySize :	  return getFreedSize();
     }
     return getTotalSize();
+#endif
+    return 0;
   }
+#ifdef MMAP_MANAGER
   size_t getTotalSize() { return mmanager->getTotalSize(); }
   size_t getAllocatedSize() { return mmanager->getUseSize(); }
   size_t getFreedSize() { return mmanager->getFreeSize(); }
+#endif
 
   bool isValid;
   std::string file;

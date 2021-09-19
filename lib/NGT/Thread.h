@@ -20,8 +20,10 @@
 
 #include    <cstdio>
 #include    <cstdlib>
-#include    <sys/time.h>
+#ifndef _MSC_VER
+#include	<sys/time.h>
 #include    <unistd.h>
+#endif
 
 #include    <iostream>
 #include    <deque>

@@ -119,7 +119,7 @@ DVPTree::split(InsertContainer &iobj, LeafNode &leaf)
 Node::ID
 DVPTree::recombineNodes(InsertContainer &ic, Node::Objects &fs, LeafNode &leaf)
 {
-  LeafNode *ln[internalChildrenSize];
+  LeafNode **ln = NGT_ALLOCA(LeafNode*, internalChildrenSize);
   Node::ID targetParent = leaf.parent;
   Node::ID targetId = leaf.id;
   ln[0] = &leaf;

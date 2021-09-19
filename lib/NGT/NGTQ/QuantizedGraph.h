@@ -225,11 +225,11 @@ namespace NGTQG {
 	}
 	auto &neighborIDs = quantizedGraph.getIDs(target.id);
 	size_t neighborSize = neighborIDs.size();
-	float ds[neighborSize + NGTQ_SIMD_BLOCK_SIZE];
+  float* ds = NGT_ALLOCA(float, neighborSize + NGTQ_SIMD_BLOCK_SIZE);
 
 #ifdef NGTQG_PREFETCH
 	{
-	  uint8_t *lid = static_cast<uint8_t*>(quantizedGraph.get(target.id));
+	  const char *lid = static_cast<const char*>(quantizedGraph.get(target.id));
 	  size_t size = ((neighborSize - 1) / (NGTQ_SIMD_BLOCK_SIZE * NGTQ_BATCH_SIZE) + 1) * (NGTQ_SIMD_BLOCK_SIZE * NGTQ_BATCH_SIZE);
 	  size /= 2;
 	  size *= quantizedIndex.getQuantizer().divisionNo; 
@@ -282,7 +282,7 @@ namespace NGTQG {
 #else
 		NGT::Object &o = *objectRepository[(*(i + 10)).id];
 #endif
-		_mm_prefetch(&o[0], _MM_HINT_T0);
+		_mm_prefetch(reinterpret_cast<const char*>(&o[0]), _MM_HINT_T0);
 	      }
 #endif
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)

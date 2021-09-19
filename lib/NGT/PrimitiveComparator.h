@@ -18,9 +18,7 @@
 
 #include	"NGT/defines.h"
 
-#if defined(NGT_NO_AVX)
-#warning "*** SIMD is *NOT* available! ***"
-#else
+#ifndef NGT_NO_AVX
 #include	<immintrin.h>
 #endif
 
@@ -28,7 +26,7 @@ namespace NGT {
 
   class MemoryCache {
   public:
-    inline static void prefetch(unsigned char *ptr, const size_t byteSizeOfObject) {
+    inline static void prefetch(const char *ptr, const size_t byteSizeOfObject) {
 #if !defined(NGT_NO_AVX)
       switch((byteSizeOfObject - 1) >> 6) {
       default:
@@ -190,7 +188,7 @@ namespace NGT {
       }
 #endif
 
-      __attribute__((aligned(32))) float f[4];
+      alignas(32) float f[4];
       _mm_store_ps(f, sum128);
 
       double s = f[0] + f[1] + f[2] + f[3];
@@ -212,7 +210,7 @@ namespace NGT {
 	a += 8;
 	b += 8;
       }
-      __attribute__((aligned(32))) float f[4];
+      alignas(32) float f[4];
       _mm_store_ps(f, sum);
       double s = f[0] + f[1] + f[2] + f[3];
       while (a < last) {
@@ -278,7 +276,7 @@ namespace NGT {
 	a += 8;
 	b += 8;
       }
-      __attribute__((aligned(32))) float f[8];
+      alignas(32) float f[8];
       _mm256_store_ps(f, sum);
       double s = f[0] + f[1] + f[2] + f[3] + f[4] + f[5] + f[6] + f[7];
       while (a < last) {
@@ -302,7 +300,7 @@ namespace NGT {
 	a += 8;
 	b += 8;
       }
-      __attribute__((aligned(32))) float f[4];
+      alignas(32) float f[4];
       _mm_store_ps(f, sum);
       double s = f[0] + f[1] + f[2] + f[3];
       while (a < last) {
@@ -470,7 +468,7 @@ namespace NGT {
 	b += 4;
       }
 #endif
-      __attribute__((aligned(32))) float f[4];
+      alignas(32) float f[4];
       _mm_store_ps(f, sum128);
       double s = static_cast<double>(f[0]) + static_cast<double>(f[1]) + static_cast<double>(f[2]) + static_cast<double>(f[3]);
       return s;
@@ -540,7 +538,7 @@ namespace NGT {
 
 #endif
 
-      __attribute__((aligned(32))) float f[4];
+      alignas(32) float f[4];
       _mm_store_ps(f, am128);
       double na = f[0] + f[1] + f[2] + f[3];
       _mm_store_ps(f, bm128);

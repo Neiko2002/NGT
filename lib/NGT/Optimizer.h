@@ -956,8 +956,8 @@ namespace NGT {
 	return;
       }
 
-      std::pair<float, float> baseAccuracyRange = std::pair<float, float>(0.30, 0.50);
-      std::pair<float, float> rateAccuracyRange = std::pair<float, float>(0.80, 0.90);
+      std::pair<float, float> baseAccuracyRange = std::pair<float, float>(0.30f, 0.50f);
+      std::pair<float, float> rateAccuracyRange = std::pair<float, float>(0.80f, 0.90f);
 
       std::string opt = args.getString("A", "");
       if (opt.size() != 0) {

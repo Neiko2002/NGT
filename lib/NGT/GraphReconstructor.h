@@ -16,14 +16,14 @@
 
 #pragma once
 
+#include	"NGT/Capi.h"
+
 #include	<unordered_map>
 #include	<unordered_set>
 #include	<list>
 
 #ifdef _OPENMP
 #include	<omp.h>
-#else
-#warning "*** OMP is *NOT* available! ***"
 #endif
 
 namespace NGT {
@@ -115,7 +115,7 @@ class GraphReconstructor {
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(10)
 #endif
-	    for (size_t tni = 0; tni < tn.size(); tni++) {
+	    for (int64_t tni = 0; tni < static_cast<int64_t>(tn.size()); tni++) {
 	      if (found) {
 		continue;
 	      }
@@ -234,7 +234,7 @@ class GraphReconstructor {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    for (size_t idx = 0; idx < tmpGraph.size(); ++idx) {
+    for (int64_t idx = 0; idx < static_cast<int64_t>(tmpGraph.size()); ++idx) {
       auto it = tmpGraph.begin() + idx;
       size_t id = idx + 1;
       try {
@@ -823,11 +823,11 @@ class GraphReconstructor {
     std::string errorMessage;
 
     size_t noOfSearchedEdges = noOfEdges < 0 ? -noOfEdges : (noOfEdges > prop.edgeSizeForCreation ? noOfEdges : prop.edgeSizeForCreation);
+	std::vector<NGT::ObjectDistances> results(batchSize);
     for (size_t bid = 1; bid < nOfObjects; bid += batchSize) {
-      NGT::ObjectDistances results[batchSize];
       // search
 #pragma omp parallel for
-      for (size_t idx = 0; idx < batchSize; idx++) {
+      for (int64_t idx = 0; idx < static_cast<int64_t>(batchSize); idx++) {
 	size_t id = bid + idx;
 	if (id % 100000 == 0) {
 	  std::cerr << "# of processed objects=" << id << std::endl;
@@ -866,7 +866,7 @@ class GraphReconstructor {
       }
       // outgoing edges
 #pragma omp parallel for
-      for (size_t idx = 0; idx < batchSize; idx++) {
+      for (int64_t idx = 0; idx < static_cast<int64_t>(batchSize); idx++) {
 	size_t id = bid + idx;
 	if (objectRepository.isEmpty(id)) {
 	  continue;
@@ -905,12 +905,15 @@ class GraphReconstructor {
 	  }
 	}
       }
+	  for(auto&& res : results) {
+		  res.clear();
+	  }
     }
     if (noOfEdges > 0) {
       // prune to build knng
       size_t  nedges = noOfEdges < 0 ? -noOfEdges : noOfEdges;
 #pragma omp parallel for
-      for (ObjectID id = 1; id < nOfObjects; ++id) {
+      for (int64_t id = 1; id < static_cast<int64_t>(nOfObjects); ++id) {
         if (objectRepository.isEmpty(id)) {
 	  continue;
         }

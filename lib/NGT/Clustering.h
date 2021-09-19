@@ -30,9 +30,7 @@ using namespace std;
 #endif
 #endif
 
-#if defined(NGT_CLUSTER_NO_AVX)
-#warning "*** SIMD is *NOT* available! ***"
-#else
+#ifndef NGT_CLUSTER_NO_AVX
 #include	<immintrin.h>
 #endif
 
@@ -203,7 +201,7 @@ namespace NGT {
 	a += 8;
 	b += 8;
       }
-      __attribute__((aligned(32))) float f[8];
+      alignas(32) float f[8];
       _mm256_store_ps(f, sum);
       double s = f[0] + f[1] + f[2] + f[3] + f[4] + f[5] + f[6] + f[7];
       while (a < last) {
@@ -303,7 +301,7 @@ namespace NGT {
 	std::priority_queue<DescendingEntry> sortedObjects;
 	// get d^2 and sort
 #pragma omp parallel for
-	for (size_t vi = 0; vi < vectors.size(); vi++) {
+	for (int64_t vi = 0; vi < static_cast<int64_t>(vectors.size()); vi++) {
 	  auto vit = vectors.begin() + vi;
 	  double mind = DBL_MAX;
 	  for (auto cit = clusters.begin(); cit != clusters.end(); ++cit) {    
@@ -342,7 +340,7 @@ namespace NGT {
 
       std::vector<Entry> sortedObjects(vectors.size());	
 #pragma omp parallel for
-      for (size_t vi = 0; vi < vectors.size(); vi++) {
+      for (int64_t vi = 0; vi < static_cast<int64_t>(vectors.size()); vi++) {
 	auto vit = vectors.begin() + vi;
 	{
 	  double mind = DBL_MAX;
@@ -444,7 +442,7 @@ namespace NGT {
       assert(index.getObjectRepositorySize() - 1 == vectors.size());
       vector<vector<Entry> > results(clusters.size());
 #pragma omp parallel for
-      for (size_t ci = 0; ci < clusters.size(); ci++) {
+      for (int64_t ci = 0; ci < static_cast<int64_t>(clusters.size()); ci++) {
 	auto cit = clusters.begin() + ci;
 	NGT::ObjectDistances objects;
 	NGT::Object *query = 0;
@@ -509,7 +507,7 @@ namespace NGT {
 	  vector<vector<Entry>> notAssignedObjects(notAssignedObjectIDs.size());
 	  size_t nOfClosestClusters = 1 * 1024 * 1024 * 1024 / 16 / (notAssignedObjectIDs.size() == 0 ? 1 : notAssignedObjectIDs.size()); 
 #pragma omp parallel for
-	  for (size_t vi = 0; vi < notAssignedObjectIDs.size(); vi++) {
+	  for (int64_t vi = 0; vi < static_cast<int64_t>(notAssignedObjectIDs.size()); vi++) {
 	    auto vit = notAssignedObjectIDs.begin() + vi;
 	    if (assignedObjects[*vit]) {
 	      continue;
@@ -551,7 +549,7 @@ namespace NGT {
       } else {
 	vector<Entry> notAssignedObjects(notAssignedObjectIDs.size());
 #pragma omp parallel for
-	for (size_t vi = 0; vi < notAssignedObjectIDs.size(); vi++) {
+	for (int64_t vi = 0; vi < static_cast<int64_t>(notAssignedObjectIDs.size()); vi++) {
 	  auto vit = notAssignedObjectIDs.begin() + vi;
 	  {
 	    double mind = DBL_MAX;
@@ -682,9 +680,12 @@ namespace NGT {
 #ifndef NGT_SHARED_MEMORY_ALLOCATOR
     double kmeansWithNGT(std::vector<std::vector<float> > &vectors, size_t numberOfClusters, std::vector<Cluster> &clusters)
     {
-      pid_t pid = getpid();
       std::stringstream str;
-      str << "cluster-ngt." << pid;
+      str << "cluster-ngt.";
+#ifndef _MSC_VER
+      pid_t pid = getpid();
+      str << pid;
+#endif
       string database = str.str();
       string dataFile;
       size_t dataSize = 0;

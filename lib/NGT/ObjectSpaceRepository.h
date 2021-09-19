@@ -476,9 +476,9 @@ namespace NGT {
 #ifndef NGT_PREFETCH_DISABLED
 	if (idx + prefetchOffset < rep.size() && rep[idx + prefetchOffset] != 0) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  MemoryCache::prefetch((unsigned char*)&(*static_cast<PersistentObject*>(ObjectRepository::get(idx + prefetchOffset))), byteSizeOfObject);
+	  MemoryCache::prefetch((const char*)&(*static_cast<PersistentObject*>(ObjectRepository::get(idx + prefetchOffset))), byteSizeOfObject);
 #else
-	  MemoryCache::prefetch((unsigned char*)&(*static_cast<PersistentObject*>(rep[idx + prefetchOffset]))[0], byteSizeOfObject);
+	  MemoryCache::prefetch((const char*)&(*static_cast<PersistentObject*>(rep[idx + prefetchOffset]))[0], byteSizeOfObject);
 #endif
 	}
 #endif

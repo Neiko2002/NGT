@@ -23,8 +23,11 @@
 #include	<bitset>
 #include	<iomanip>
 #include	<unordered_set>
+#include	<filesystem>
 
+#ifndef _MSC_VER
 #include	<sys/time.h>
+#endif
 #include	<sys/stat.h>
 #include	<stdint.h>
 
@@ -394,11 +397,7 @@ namespace NGT {
     }
 #endif
     static void mkdir(const std::string &dir) { 
-      if (::mkdir(dir.c_str(), S_IRWXU | S_IRGRP | S_IXGRP |  S_IROTH | S_IXOTH) != 0) {
-	std::stringstream msg;
-	msg << "NGT::Index::mkdir: Cannot make the specified directory. " << dir;
-	NGTThrowException(msg);	
-      }
+      std::filesystem::create_directories(dir.c_str());
     }
     static void create(const std::string &database, NGT::Property &prop, bool redirect = false) { createGraphAndTree(database, prop, redirect); }
     static void createGraphAndTree(const std::string &database, NGT::Property &prop, const std::string &dataFile, size_t dataSize = 0, bool redirect = false);

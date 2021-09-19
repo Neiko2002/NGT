@@ -18,14 +18,23 @@
 
 #include "MmapManager.h"
 
+#include <cstdint>
+
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 namespace MemoryManager{
   const uint64_t MMAP_MANAGER_VERSION = 5;
   
   const bool MMAP_DEFAULT_ALLOW_EXPAND = false; 
   const uint64_t MMAP_CNTL_FILE_RANGE = 16; 
-  const size_t MMAP_CNTL_FILE_SIZE = MMAP_CNTL_FILE_RANGE * sysconf(_SC_PAGESIZE); 
+#ifdef _MSC_VER
+  const size_t SYSTEM_PAGE_SIZE = 4096;
+#else
+  const size_t SYSTEM_PAGE_SIZE = sysconf(_SC_PAGESIZE);
+#endif
+  const size_t MMAP_CNTL_FILE_SIZE = MMAP_CNTL_FILE_RANGE * SYSTEM_PAGE_SIZE; 
   const uint64_t MMAP_MAX_FILE_NAME_LENGTH = 1024; 
   const std::string MMAP_CNTL_FILE_SUFFIX = "c"; 
   

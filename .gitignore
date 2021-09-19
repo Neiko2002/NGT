@@ -2,3 +2,7 @@ build/
 python/VERSION
 python/dist/
 python/ngt.egg-info/
+*build*
+cmake-variants.yaml
+.vscode
+index

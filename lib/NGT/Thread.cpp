@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-#include	<pthread.h>
+#include	<mutex>
+#include	<thread>
+#include	<optional>
+#include	<condition_variable>
 
 #include	"Thread.h"
 
@@ -24,20 +27,18 @@ using namespace NGT;
 namespace NGT {
 class ThreadInfo {
   public:
-    pthread_t		threadid;
-    pthread_attr_t	threadAttr;
+    std::optional<std::thread> thread;
 };
 
 class ThreadMutex {
   public:
-    pthread_mutex_t	mutex;
-    pthread_cond_t	condition;
+    std::recursive_mutex mutex;
+    std::condition_variable_any condition;
 };
 }
 
 Thread::Thread() {
   threadInfo = new ThreadInfo;
-  threadInfo->threadid = 0;
   threadNo = -1;
   isTerminate = false;
 }
@@ -58,8 +59,6 @@ void
 Thread::destructThreadMutex(ThreadMutex *t)
 {
   if (t != 0) {
-    pthread_mutex_destroy(&(t->mutex));
-    pthread_cond_destroy(&(t->condition));
     delete t;
   }
 }
@@ -67,62 +66,49 @@ Thread::destructThreadMutex(ThreadMutex *t)
 int
 Thread::start()
 {
-  pthread_attr_init(&(threadInfo->threadAttr));
-  size_t stackSize = 0;
-  pthread_attr_getstacksize(&(threadInfo->threadAttr), &stackSize);
-  if (stackSize < 0xa00000) {	// 64bit stack size
-    stackSize *= 4;
-  }
-  pthread_attr_setstacksize(&(threadInfo->threadAttr), stackSize);
-  pthread_attr_getstacksize(&(threadInfo->threadAttr), &stackSize);
-  return pthread_create(&(threadInfo->threadid), &(threadInfo->threadAttr), Thread::startThread, this);
-
+  threadInfo->thread.emplace(Thread::startThread, this);
+  return 0;
 }
 
 int
 Thread::join()
 {
-  return pthread_join(threadInfo->threadid, 0);
+  if (threadInfo->thread && threadInfo->thread->joinable()) {
+    threadInfo->thread->join();
+  }
+  return 0;
 }
 
 void
 Thread::lock(ThreadMutex &m)
 {
-  pthread_mutex_lock(&m.mutex);
+  m.mutex.lock();
 }
 void
 Thread::unlock(ThreadMutex &m)
 {
-  pthread_mutex_unlock(&m.mutex);
+  m.mutex.unlock();
 }
 void
 Thread::signal(ThreadMutex &m)
 {
-  pthread_cond_signal(&m.condition);
+  m.condition.notify_one();
 }
 
 void
 Thread::wait(ThreadMutex &m)
 {
-  if (pthread_cond_wait(&m.condition, &m.mutex) != 0) {
-    cerr << "waitForSignalFromThread: internal error" << endl;
-    NGTThrowException("waitForSignalFromThread: internal error");
-  }
+  std::unique_lock lock{m.mutex};
+  m.condition.wait(lock);
 }
 
 void
 Thread::broadcast(ThreadMutex &m)
 {
-  pthread_cond_broadcast(&m.condition);
+  m.condition.notify_all();
 }
 
 void
 Thread::mutexInit(ThreadMutex &m)
 {
-  if (pthread_mutex_init(&m.mutex, NULL) != 0) {
-    NGTThrowException("Thread::mutexInit: Cannot initialize mutex");
-  }
-  if (pthread_cond_init(&m.condition, NULL) != 0) {
-    NGTThrowException("Thread::mutexInit: Cannot initialize condition");
-  }
 }

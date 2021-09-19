@@ -26,13 +26,10 @@
 #define NGTQG_PREFETCH
 #if defined(NGT_AVX512)
 #define NGTQG_AVX512	
-#warning "AVX512 is available for NGTQG"
 #elif defined(NGT_AVX2)
 #define NGTQG_AVX2
-#warning "AVX2 is available for NGTQG"
 #else
 #undef NGTQG_PREFETCH
-#warning "SIMD is not available for NGTQG. NGTQG might not work well."
 #endif
 
 
@@ -520,7 +517,7 @@ public:
 	gcptr += 4;
 	lcptr += 4;
       }
-      __attribute__((aligned(32))) float f[4];
+      alignas(32) float f[4];
       _mm_store_ps(f, sum);
       double d = f[0] + f[1] + f[2] + f[3];
       while (lcptr < lcendptr) {
@@ -711,7 +708,7 @@ public:
     NGT::Object &gcentroid = (NGT::Object &)*globalCodebook->getObjectSpace().getRepository().get(objectID);
     size_t sizeOfObject = globalCodebook->getObjectSpace().getByteSizeOfObject();
 
-    float dlutmp[distanceLUT.size];
+    float* dlutmp = NGT_ALLOCA(float, distanceLUT.size);
 #ifdef NGTQG_DOT_PRODUCT
     createFloatDotProductLookup(&((NGT::Object&)object)[0], sizeOfObject, &gcentroid[0], dlutmp);
 #else
@@ -994,19 +991,19 @@ public:
 #endif 
       while (localID < lastgroup256) {
 	__m256i lookupTable = _mm256_loadu_si256((__m256i const*)lut);
-	_mm_prefetch(&localID[0] + 64 * 8, _MM_HINT_T0); 
+	_mm_prefetch(reinterpret_cast<const char*>(&localID[0]) + 64 * 8, _MM_HINT_T0); 
 	__m256i packedobj = _mm256_cvtepu8_epi16(_mm_loadu_si128((__m128i const*)&localID[0]));
 	__m256i lo = _mm256_and_si256(packedobj, mask256x0F);
 	__m256i hi = _mm256_slli_epi16(_mm256_and_si256(packedobj, mask256xF0), 4);
 	__m256i obj = _mm256_or_si256(lo, hi);
 	__m256i vtmp = _mm256_shuffle_epi8(lookupTable, obj);
-	__attribute__((aligned(32))) uint8_t v[32];
+	alignas(32) uint8_t v[32];
 	_mm256_storeu_si256((__m256i*)&v, vtmp);
 
 #if defined(NGTQG_AVX512)
         depu16 = _mm512_adds_epu16(depu16, _mm512_cvtepu8_epi16(vtmp));
 #else
-	__attribute__((aligned(32))) uint16_t v16[16];
+	alignas(32) uint16_t v16[16];
 	_mm256_storeu_si256((__m256i*)&v16, depu16l);
 	_mm256_storeu_si256((__m256i*)&v16, depu16h);
 	depu16l = _mm256_adds_epu16(depu16l, _mm256_cvtepu8_epi16(_mm256_extractf128_si256(vtmp, 0)));
@@ -1037,7 +1034,7 @@ public:
       __m256i hih = _mm256_cvtepu16_epi32(_mm256_extractf128_si256(depu16h, 1));
       __m256 distancel = _mm256_cvtepi32_ps(_mm256_add_epi32(lol, hil));
       __m256 distanceh = _mm256_cvtepi32_ps(_mm256_add_epi32(loh, hih));
-      __attribute__((aligned(32))) float v32[8];
+      alignas(32) float v32[8];
       _mm256_storeu_ps((float*)&v32, distancel);
       _mm256_storeu_ps((float*)&v32, distanceh);
       __m256 scalel = _mm256_broadcastss_ps(*reinterpret_cast<__m128*>(&distanceLUT.scales[0]));
@@ -1135,7 +1132,7 @@ public:
 	  lcptr += 8;
 	}
 	__m128 sum128 = _mm_add_ps(_mm256_extractf128_ps(sum256, 0), _mm256_extractf128_ps(sum256, 1));
-	__attribute__((aligned(32))) float f[4];
+	alignas(32) float f[4];
 	_mm_store_ps(f, sum128);
 	double d = f[0] + f[1] + f[2] + f[3];
 #else

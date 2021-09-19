@@ -1,3 +1,2 @@
-if( ${UNIX} )
-	add_subdirectory(${PROJECT_SOURCE_DIR}/lib/NGT)
-endif()
+set(NGT_BUILD_INTERFACE_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR})
+add_subdirectory(NGT)

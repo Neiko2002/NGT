@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#include	"defines.h"
+#include	"NGT/defines.h"
 #include	"Graph.h"
 #include	"Thread.h"
 #include	"Index.h"
@@ -257,9 +257,9 @@ NeighborhoodGraph::setupDistances(NGT::SearchContainer &sc, ObjectDistances &see
   size_t poft = prefetchOffset < seedSize ? prefetchOffset : seedSize;
   for (size_t i = 0; i < poft; i++) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-    MemoryCache::prefetch(reinterpret_cast<unsigned char *>(objectRepository.get(seeds[i].id)), prefetchSize);
+    MemoryCache::prefetch(reinterpret_cast<const char *>(objectRepository.get(seeds[i].id)), prefetchSize);
 #else
-    MemoryCache::prefetch(reinterpret_cast<unsigned char *>(objects[seeds[i].id]), prefetchSize);
+    MemoryCache::prefetch(reinterpret_cast<const char *>(objects[seeds[i].id]), prefetchSize);
 #endif
   }
 #endif
@@ -267,9 +267,9 @@ NeighborhoodGraph::setupDistances(NGT::SearchContainer &sc, ObjectDistances &see
 #ifndef NGT_PREFETCH_DISABLED
     if (i + prefetchOffset < seedSize) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-      MemoryCache::prefetch(reinterpret_cast<unsigned char*>(objectRepository.get(seeds[i + prefetchOffset].id)), prefetchSize);
+      MemoryCache::prefetch(reinterpret_cast<const char*>(objectRepository.get(seeds[i + prefetchOffset].id)), prefetchSize);
 #else
-      MemoryCache::prefetch(reinterpret_cast<unsigned char*>(objects[seeds[i + prefetchOffset].id]), prefetchSize);
+      MemoryCache::prefetch(reinterpret_cast<const char*>(objects[seeds[i + prefetchOffset].id]), prefetchSize);
 #endif
     }
 #endif
@@ -305,9 +305,9 @@ NeighborhoodGraph::setupDistances(NGT::SearchContainer &sc, ObjectDistances &see
   size_t poft = prefetchOffset < seedSize ? prefetchOffset : seedSize;
   for (size_t i = 0; i < poft; i++) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-    MemoryCache::prefetch(reinterpret_cast<unsigned char *>(objectRepository.get(seeds[i].id)), prefetchSize);
+    MemoryCache::prefetch(reinterpret_cast<const char *>(objectRepository.get(seeds[i].id)), prefetchSize);
 #else
-    MemoryCache::prefetch(reinterpret_cast<unsigned char *>(objects[seeds[i].id]), prefetchSize);
+    MemoryCache::prefetch(reinterpret_cast<const char *>(objects[seeds[i].id]), prefetchSize);
 #endif
   }
 #endif
@@ -315,9 +315,9 @@ NeighborhoodGraph::setupDistances(NGT::SearchContainer &sc, ObjectDistances &see
 #ifndef NGT_PREFETCH_DISABLED
     if (i + prefetchOffset < seedSize) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-      MemoryCache::prefetch(reinterpret_cast<unsigned char*>(objectRepository.get(seeds[i + prefetchOffset].id)), prefetchSize);
+      MemoryCache::prefetch(reinterpret_cast<const char*>(objectRepository.get(seeds[i + prefetchOffset].id)), prefetchSize);
 #else
-      MemoryCache::prefetch(reinterpret_cast<unsigned char*>(objects[seeds[i + prefetchOffset].id]), prefetchSize);
+      MemoryCache::prefetch(reinterpret_cast<const char*>(objects[seeds[i + prefetchOffset].id]), prefetchSize);
 #endif
     }
 #endif
@@ -438,14 +438,14 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
       size_t neighborSize = neighbors->size() < edgeSize ? neighbors->size() : edgeSize;
       neighborendptr = neighborptr + neighborSize;
 
-      pair<uint64_t, PersistentObject*>* nsPtrs[neighborSize];
+      auto* nsPtrs = static_cast<std::pair<uint64_t, PersistentObject*>**>(alloca(sizeof(std::pair<uint64_t, PersistentObject*>*) * neighborSize));
       size_t nsPtrsSize = 0;
 
       for (; neighborptr < neighborendptr; ++neighborptr) {
        if (!distanceChecked[(*(neighborptr)).first]) {
          nsPtrs[nsPtrsSize] = neighborptr;
          if (nsPtrsSize < prefetchOffset) {
-           unsigned char *ptr = reinterpret_cast<unsigned char*>((*(neighborptr)).second);
+           const char *ptr = reinterpret_cast<const char*>((*(neighborptr)).second);
            MemoryCache::prefetch(ptr, prefetchSize);
          }
          nsPtrsSize++;
@@ -454,7 +454,7 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
       for (size_t idx = 0; idx < nsPtrsSize; idx++) {
 	neighborptr = nsPtrs[idx]; 
 	if (idx + prefetchOffset < nsPtrsSize) {
-	  unsigned char *ptr = reinterpret_cast<unsigned char*>((*(nsPtrs[idx + prefetchOffset])).second);
+	  const char *ptr = reinterpret_cast<const char*>((*(nsPtrs[idx + prefetchOffset])).second);
 	  MemoryCache::prefetch(ptr, prefetchSize);
 	}
 #ifdef NGT_VISIT_COUNT
@@ -576,7 +576,7 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
       size_t poft = prefetchOffset < neighborSize ? prefetchOffset : neighborSize;
       for (size_t i = 0; i < poft; i++) {
 	if (!distanceChecked[(*(neighborptr + i)).id]) {
-	  unsigned char *ptr = reinterpret_cast<unsigned char*>(objectRepository.get((*(neighborptr + i)).id));
+	  const char *ptr = reinterpret_cast<const char*>(objectRepository.get((*(neighborptr + i)).id));
 	  MemoryCache::prefetch(ptr, prefetchSize);
 	}
       }
@@ -586,7 +586,7 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
       for (; neighborptr < neighborendptr; ++neighborptr) {
 #endif
 	if ((neighborptr + prefetchOffset < neighborendptr) && !distanceChecked[(*(neighborptr + prefetchOffset)).id]) {
-	  unsigned char *ptr = reinterpret_cast<unsigned char*>(objectRepository.get((*(neighborptr + prefetchOffset)).id));
+	  const char *ptr = reinterpret_cast<const char*>(objectRepository.get((*(neighborptr + prefetchOffset)).id));
 	  MemoryCache::prefetch(ptr, prefetchSize);
 	}
 	sc.visitCount++;
