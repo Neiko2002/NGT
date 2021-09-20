@@ -1554,7 +1554,7 @@ namespace NGT {
       }
 
       std::vector<std::pair<float, double>> epsilonAccuracyMap;
-      std::pair<float, double> prev(0.0, -1.0);
+      std::pair<float, double> prev(0.0f, -1.0);
       for (auto i = map.begin(); i != map.end(); ++i) {
 	if (fabs((*i).first - prev.first) <= FLT_EPSILON) {
 	  continue;

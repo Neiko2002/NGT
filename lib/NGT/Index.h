@@ -313,7 +313,7 @@ namespace NGT {
 	    msg << "AccuracyTable: Invalid accuracy table string " << *i << ":" << str;
 	    NGTThrowException(msg);
 	  }
-	  table.push_back(std::make_pair(Common::strtod(ts[0]), Common::strtod(ts[1])));
+	  table.push_back(std::make_pair(Common::strtof(ts[0]), Common::strtod(ts[1])));
 	}
       }
 
@@ -1249,7 +1249,7 @@ namespace NGT {
 	      msg << "GraphAndTreeIndex::getSeeds: Cannot search for tree.:" << err.what();
 	      NGTThrowException(msg);
       	    }
-	    notexist.insert(std::pair<uint32_t, uint32_t>(tso.nodeID.getID(), id));
+	    notexist.insert(std::pair<uint32_t, uint32_t>(tso.nodeID.getID(), static_cast<uint32_t>(id)));
 	    objectCount++;
 	  }
 	}
@@ -1262,12 +1262,12 @@ namespace NGT {
 	ObjectDistances objects;
 	DVPTree::getObjectIDsFromLeaf(leafNodeIDs[i], objects);
 	for (size_t j = 0; j < objects.size(); j++) {
-	  order.push_back(std::pair<uint32_t, uint32_t>(objects[j].id, objectCount));
+	  order.push_back(std::pair<uint32_t, uint32_t>(objects[j].id, static_cast<uint32_t>(objectCount)));
 	  objectCount++;
 	}
 	auto nei = notexist.equal_range(leafNodeIDs[i].getID());
 	for (auto ii = nei.first; ii != nei.second; ++ii) {
-	  order.push_back(std::pair<uint32_t, uint32_t>((*ii).second, objectCount));
+	  order.push_back(std::pair<uint32_t, uint32_t>((*ii).second, static_cast<uint32_t>(objectCount)));
 	  objectCount++;
 	}
       }

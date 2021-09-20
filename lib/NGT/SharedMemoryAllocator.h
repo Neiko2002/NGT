@@ -172,7 +172,8 @@ class SharedMemoryAllocator {
 #if defined(MMAP_MANAGER) && !defined(NOT_USE_MMAP_ALLOCATOR)
     return mmanager->getAbsAddr(oft); 
 #else
-    return (void*)oft;
+    (void)oft;
+    return nullptr;
 #endif
   }
   off_t getOffset(void *adr) { 
@@ -182,7 +183,8 @@ class SharedMemoryAllocator {
 #if defined(MMAP_MANAGER) && !defined(NOT_USE_MMAP_ALLOCATOR)
     return mmanager->getRelAddr(adr); 
 #else
-    return (off_t)adr;
+    (void)adr;
+    return off_t{};
 #endif
   }
   size_t getMemorySize(GetMemorySizeType t) {

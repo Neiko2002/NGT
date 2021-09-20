@@ -276,7 +276,7 @@ class GraphReconstructor {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
 	      candidates.push_back(std::pair<int, std::pair<uint32_t, uint32_t> >((*dstNode).second.first, std::pair<uint32_t, uint32_t>(srcNode.at(sni, outGraph.repository.allocator).id, dstNodeID)));  
 #else
-	      candidates.push_back(std::pair<int, std::pair<uint32_t, uint32_t> >((*dstNode).second.first, std::pair<uint32_t, uint32_t>(srcNode[sni].id, dstNodeID)));  
+	      candidates.push_back({static_cast<uint32_t>((*dstNode).second.first), std::pair<uint32_t, uint32_t>(srcNode[sni].id, dstNodeID)});  
 #endif
 	      removeCandidateCount++;
 	    }

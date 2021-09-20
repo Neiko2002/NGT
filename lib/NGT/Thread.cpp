@@ -32,8 +32,8 @@ class ThreadInfo {
 
 class ThreadMutex {
   public:
-    std::recursive_mutex mutex;
-    std::condition_variable_any condition;
+    std::mutex mutex;
+    std::condition_variable condition;
 };
 }
 
@@ -98,8 +98,9 @@ Thread::signal(ThreadMutex &m)
 void
 Thread::wait(ThreadMutex &m)
 {
-  std::unique_lock lock{m.mutex};
+  std::unique_lock lock{m.mutex, std::adopt_lock};
   m.condition.wait(lock);
+  lock.release();
 }
 
 void

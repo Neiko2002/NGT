@@ -68,8 +68,8 @@ namespace NGT {
       minNumOfEdges = 0;
       numOfQueries = 100;
       numOfResults = 20;
-      baseAccuracyRange = std::pair<float, float>(0.30, 0.50);
-      rateAccuracyRange = std::pair<float, float>(0.80, 0.90);
+      baseAccuracyRange = std::pair<float, float>(0.30f, 0.50f);
+      rateAccuracyRange = std::pair<float, float>(0.80f, 0.90f);
       gtEpsilon = 0.1;
       margin = 0.2;
       logDisabled = false;

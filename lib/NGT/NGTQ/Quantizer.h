@@ -1780,7 +1780,7 @@ public:
     for (size_t i = 0; i < localData.size(); i++) {
       for (size_t di = 0; di < divisionNo; di++) {
 	size_t id = lids[i * divisionNo + di].id;
-	assert(!property.localCodebookState || id <= ((1UL << (sizeof(LOCAL_ID_TYPE) * 8)) - 1)); 
+	assert(!property.localCodebookState || id <= ((size_t{1UL} << (sizeof(LOCAL_ID_TYPE) * 8UL)) - 1)); 
 #ifdef NGTQ_SHARED_INVERTED_INDEX
 	(*invertedIndex.at(localData[i].iiIdx)).at(localData[i].iiLocalIdx, invertedIndex.allocator).localID[di] = id;
 #else
@@ -1822,7 +1822,7 @@ public:
       assert(localData.size() == lids.size());
       for (size_t i = 0; i < localData.size(); i++) {
 	size_t id = lids[i].id;
-	assert(!property.localCodebookState || id <= ((1UL << (sizeof(LOCAL_ID_TYPE) * 8)) - 1)); 
+	assert(!property.localCodebookState || id <= ((size_t{1UL} << (sizeof(LOCAL_ID_TYPE) * 8UL)) - 1)); 
 #ifdef NGTQ_SHARED_INVERTED_INDEX
 	(*invertedIndex.at(localData[i].iiIdx)).at(localData[i].iiLocalIdx, invertedIndex.allocator).localID[li] = id;
 #else
@@ -2012,10 +2012,10 @@ public:
 	      NGT::Property &globalProperty, 
 	      NGT::Property &localProperty
 	      ) {
-
-    if (property.localCentroidLimit > ((1UL << (sizeof(LOCAL_ID_TYPE) * 8)) - 1)) {
+    const auto local_centroid_limit = size_t{1UL} << (sizeof(LOCAL_ID_TYPE) * 8UL);
+    if (property.localCentroidLimit > (local_centroid_limit - 1)) {
       stringstream msg;
-      msg << "Quantizer::Error. Local centroid limit is too large. " << property.localCentroidLimit << " It must be less than " << (1UL << (sizeof(LOCAL_ID_TYPE) * 8));
+      msg << "Quantizer::Error. Local centroid limit is too large. " << property.localCentroidLimit << " It must be less than " << local_centroid_limit;
       NGTThrowException(msg);
     }
 
