@@ -32,6 +32,7 @@
 #include	<iomanip>
 #include	<algorithm>
 #include	<typeinfo>
+#include	<chrono>
 
 #ifndef _MSC_VER
 #include	<sys/time.h>
@@ -2141,48 +2142,45 @@ namespace NGT {
 
   class Timer {
   public:
-  Timer() = default;
-  // :time(0) {}
+    Timer():time(0) {}
 
     void reset() { 
-      // time = 0; ntime = 0; 
-      }
+       time = 0; ntime = 0; 
+    }
 
     void start() {
-      // struct timespec res;
-      // clock_getres(CLOCK_REALTIME, &res);
-      // reset();
-      // clock_gettime(CLOCK_REALTIME, &startTime);
+      startTime = std::chrono::high_resolution_clock::now();
+      reset();
     }
 
     void restart() {
-      // clock_gettime(CLOCK_REALTIME, &startTime);
+      startTime = std::chrono::high_resolution_clock::now();
     }
 
     void stop() {
-  //     clock_gettime(CLOCK_REALTIME, &stopTime);
-  //     sec = stopTime.tv_sec - startTime.tv_sec;
-  //     nsec = stopTime.tv_nsec - startTime.tv_nsec;
-  //     if (nsec < 0) {
-	// sec -= 1;
-	// nsec += 1000000000L;
-  //     }
-  //     time += (double)sec + (double)nsec / 1000000000.0;
-  //     ntime += sec * 1000000000L + nsec;
+      stopTime = std::chrono::high_resolution_clock::now();
+      sec = std::chrono::duration_cast<std::chrono::seconds>(stopTime - startTime).count();
+      nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(stopTime - startTime).count();
+      if (nsec < 0) {
+        sec -= 1;
+        nsec += 1000000000L;
+      }
+      time += (double)sec + (double)nsec / 1000000000.0;
+      ntime += sec * 1000000000L + nsec;
     }
 
     friend std::ostream &operator<<(std::ostream &os, Timer &t) {
-      // os << std::setprecision(6) << t.time << " (sec)";
+      os << std::setprecision(6) << t.time << " (sec)";
       return os;
     }
 
-    // struct timespec startTime;
-    // struct timespec stopTime;
+    std::chrono::steady_clock::time_point startTime;
+    std::chrono::steady_clock::time_point stopTime;
 
     int64_t	sec;
     int64_t	nsec;
     int64_t	ntime;	// nano second
-    double      time;	// second
+    double  time; 	// second
   };
 
 } // namespace NGT
