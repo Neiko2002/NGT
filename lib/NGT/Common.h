@@ -658,15 +658,15 @@ namespace NGT {
     void save(const std::string &f) {    
       std::ofstream st(f); 
       if (!st) {
-	std::stringstream msg;
-	msg << "PropertySet::save: Cannot save. " << f << std::endl;
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "PropertySet::save: Cannot save. " << f << std::endl;
+        NGTThrowException(msg);
       }
       save(st); 
     }    
     void save(std::ofstream &os) {
       for (std::map<std::string, std::string>::iterator i = this->begin(); i != this->end(); i++) {
-	os << i->first << "\t" << i->second << std::endl;
+      	os << i->first << "\t" << i->second << std::endl;
       }
     }
     void load(std::ifstream &is) {
@@ -1347,11 +1347,11 @@ namespace NGT {
     void deserialize(std::ifstream &is, NGT::ObjectSpace *objectspace = 0) {
       uint32_t sz;
       try {
-	NGT::Serializer::read(is, sz);
+	      NGT::Serializer::read(is, sz);
       } catch(NGT::Exception &err) {
-	std::stringstream msg;
-	msg << "DynamicLengthVector::deserialize: It might be caused by inconsistency of the valuable type of the vector. " << err.what();
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "DynamicLengthVector::deserialize: It might be caused by inconsistency of the valuable type of the vector. " << err.what();
+        NGTThrowException(msg);
       }
       resize(sz);
       is.read(reinterpret_cast<char*>(vector), sz * elementSize);
@@ -1366,15 +1366,15 @@ namespace NGT {
 
     void extend(size_t idx) {
       if (idx >= allocatedSize) {
-	uint64_t size = allocatedSize == 0 ? 1 : allocatedSize;
-	do {
-	  size <<= 1;
-	} while (size <= idx);
-	if (size > 0xffffffff) {
-	  std::cerr << "Vector is too big. " << size << std::endl;
-	  abort();
-	}
-	reserve(size);
+        uint64_t size = allocatedSize == 0 ? 1 : allocatedSize;
+        do {
+          size <<= 1;
+        } while (size <= idx);
+        if (size > 0xffffffff) {
+          std::cerr << "Vector is too big. " << size << std::endl;
+          abort();
+        }
+        reserve(size);
       }
     }
 
@@ -1727,21 +1727,21 @@ namespace NGT {
 
     size_t push(TYPE *n) {
       if (std::vector<TYPE*>::size() == 0) {
-	std::vector<TYPE*>::push_back(0);
+	      std::vector<TYPE*>::push_back(0);
       }
       std::vector<TYPE*>::push_back(n);
       return std::vector<TYPE*>::size() - 1;
     }
 
     size_t insert(TYPE *n) {
-#ifdef ADVANCED_USE_REMOVED_LIST
-      if (!removedList.empty()) {
-	size_t idx = removedList.top();
-	removedList.pop();
-	put(idx, n);
-	return idx;
-      }
-#endif
+      #ifdef ADVANCED_USE_REMOVED_LIST
+        if (!removedList.empty()) {
+          size_t idx = removedList.top();
+          removedList.pop();
+          put(idx, n);
+          return idx;
+        }
+      #endif
       return push(n);
     }
 
@@ -1792,65 +1792,68 @@ namespace NGT {
     inline TYPE *getWithoutCheck(size_t idx) { return (*this)[idx]; }
 
     void serialize(std::ofstream &os, ObjectSpace *objectspace = 0) {
+
       if (!os.is_open()) {
-	NGTThrowException("NGT::Common: Not open the specified stream yet.");
+	      NGTThrowException("NGT::Common: Not open the specified stream yet.");
       }
-      NGT::Serializer::write(os, std::vector<TYPE*>::size());    
-      for (size_t idx = 0; idx < std::vector<TYPE*>::size(); idx++) {
-	if ((*this)[idx] == 0) {
-	  NGT::Serializer::write(os, '-');
-	} else {
-	  NGT::Serializer::write(os, '+');
-	  if (objectspace == 0) {
-	    (*this)[idx]->serialize(os);
-	  } else {
-	    (*this)[idx]->serialize(os, objectspace);
-	  }
-	}
+
+      auto s = std::vector<TYPE*>::size();
+      NGT::Serializer::write(os, s);    
+      for (size_t idx = 0; idx < s; idx++) {
+        auto type = ((*this)[idx] == 0) ? '-' : '+';
+        NGT::Serializer::write(os, type);
+
+        if((*this)[idx] != 0) {
+          if (objectspace == 0) {
+            (*this)[idx]->serialize(os);
+          } else {
+            (*this)[idx]->serialize(os, objectspace);
+          }
+        }
       }
     }
 
     void deserialize(std::ifstream &is, ObjectSpace *objectspace = 0) {
       if (!is.is_open()) {
-	NGTThrowException("NGT::Common: Not open the specified stream yet.");
+	      NGTThrowException("NGT::Common: Not open the specified stream yet.");
       }
       deleteAll();
       size_t s;
       NGT::Serializer::read(is, s);
       std::vector<TYPE*>::reserve(s);
       for (size_t i = 0; i < s; i++) {
-	char type;
-	NGT::Serializer::read(is, type);
-	switch(type) {
-	case '-':
-	  {
-	    std::vector<TYPE*>::push_back(0);
-#ifdef ADVANCED_USE_REMOVED_LIST
-	    if (i != 0) {
-	      removedList.push(i);
-	    }
-#endif
-	  }
-	  break;
-	case '+':
-	  {
-	    if (objectspace == 0) {
-	      TYPE *v = new TYPE;
-	      v->deserialize(is);
-	      std::vector<TYPE*>::push_back(v);
-	    } else {
-	      TYPE *v = new TYPE(objectspace);
-	      v->deserialize(is, objectspace);
-	      std::vector<TYPE*>::push_back(v);
-	    }
-	  }
-	  break;
-	default:
-	  {
-	    assert(type == '-' || type == '+');
-	    break;
-	  }
-	}
+        char type;
+        NGT::Serializer::read(is, type);
+        switch(type) {
+          case '-':
+            {
+              std::vector<TYPE*>::push_back(0);
+              #ifdef ADVANCED_USE_REMOVED_LIST
+              if (i != 0) {
+                removedList.push(i);
+              }
+              #endif
+            }
+            break;
+          case '+':
+            {
+              if (objectspace == 0) {
+                TYPE *v = new TYPE;
+                v->deserialize(is);
+                std::vector<TYPE*>::push_back(v);
+              } else {
+                TYPE *v = new TYPE(objectspace);
+                v->deserialize(is, objectspace);
+                std::vector<TYPE*>::push_back(v);
+              }
+            }
+            break;
+          default:
+            {
+              assert(type == '-' || type == '+');
+              break;
+            }
+        }
       }
     }
 

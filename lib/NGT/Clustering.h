@@ -143,28 +143,26 @@ namespace NGT {
       }
     }
 
-    static void
-      saveVectors(const std::string &file, std::vector<std::vector<float> > &vectors)
+    static void saveVectors(const std::string &file, std::vector<std::vector<float> > &vectors)
     {
       std::ofstream os(file);
       for (auto vit = vectors.begin(); vit != vectors.end(); ++vit) {
-	std::vector<float> &v = *vit;
-	for (auto it = v.begin(); it != v.end(); ++it) {
-	  os << std::setprecision(9) << (*it);
-	  if (it + 1 != v.end()) {
-	    os << "\t";
-	  }
-	}
-	os << std::endl;
+        std::vector<float> &v = *vit;
+        for (auto it = v.begin(); it != v.end(); ++it) {
+          os << std::setprecision(9) << (*it);
+          if (it + 1 != v.end()) {
+            os << "\t";
+          }
+        }
+        os << std::endl;
       }
     }
 
-    static void
-      saveVector(const std::string &file, std::vector<size_t> &vectors)
+    static void saveVector(const std::string &file, std::vector<size_t> &vectors)
     {
       std::ofstream os(file);
       for (auto vit = vectors.begin(); vit != vectors.end(); ++vit) {
-	os << *vit << std::endl;
+	      os << *vit << std::endl;
       }
     }
 
@@ -602,19 +600,18 @@ namespace NGT {
       return distance; 
     }
 
-    static void
-      saveClusters(const std::string &file, std::vector<Cluster> &clusters)
+    static void saveClusters(const std::string &file, std::vector<Cluster> &clusters)
     {
       std::ofstream os(file);
       for (auto cit = clusters.begin(); cit != clusters.end(); ++cit) {
-	std::vector<float> &v = (*cit).centroid;
-	for (auto it = v.begin(); it != v.end(); ++it) {
-	  os << std::setprecision(9) << (*it);
-	  if (it + 1 != v.end()) {
-	    os << "\t";
-	  }
-	}
-	os << std::endl;
+        std::vector<float> &v = (*cit).centroid;
+        for (auto it = v.begin(); it != v.end(); ++it) {
+          os << std::setprecision(9) << (*it);
+          if (it + 1 != v.end()) {
+            os << "\t";
+          }
+        }
+        os << std::endl;
       }
 
     }

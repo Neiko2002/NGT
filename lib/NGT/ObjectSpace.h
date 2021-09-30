@@ -294,40 +294,43 @@ namespace NGT {
   class BaseObject {
   public:
     virtual uint8_t &operator[](size_t idx) const = 0;
+
     void serialize(std::ostream &os, ObjectSpace *objectspace = 0) { 
       assert(objectspace != 0);
       size_t byteSize = objectspace->getByteSizeOfObject();
       NGT::Serializer::write(os, (uint8_t*)&(*this)[0], byteSize); 
     }
+
     void deserialize(std::istream &is, ObjectSpace *objectspace = 0) { 
       assert(objectspace != 0);
       size_t byteSize = objectspace->getByteSizeOfObject();
       assert(&(*this)[0] != 0);
       NGT::Serializer::read(is, (uint8_t*)&(*this)[0], byteSize); 
       if (is.eof()) {
-	std::stringstream msg;
-	msg << "ObjectSpace::BaseObject: Fatal Error! Read beyond the end of the object file. The object file is corrupted?" << byteSize;
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "ObjectSpace::BaseObject: Fatal Error! Read beyond the end of the object file. The object file is corrupted?" << byteSize;
+        NGTThrowException(msg);
       }
     }
+
     void serializeAsText(std::ostream &os, ObjectSpace *objectspace = 0) { 
       assert(objectspace != 0);
       const std::type_info &t = objectspace->getObjectType();
       size_t dimension = objectspace->getDimension();
       void *ref = (void*)&(*this)[0];
       if (t == typeid(uint8_t)) {
-	NGT::Serializer::writeAsText(os, (uint8_t*)ref, dimension); 
+	      NGT::Serializer::writeAsText(os, (uint8_t*)ref, dimension); 
       } else if (t == typeid(float)) {
-	NGT::Serializer::writeAsText(os, (float*)ref, dimension); 
+      	NGT::Serializer::writeAsText(os, (float*)ref, dimension); 
       } else if (t == typeid(double)) {
-	NGT::Serializer::writeAsText(os, (double*)ref, dimension); 
+	      NGT::Serializer::writeAsText(os, (double*)ref, dimension); 
       } else if (t == typeid(uint16_t)) {
-	NGT::Serializer::writeAsText(os, (uint16_t*)ref, dimension); 
+	      NGT::Serializer::writeAsText(os, (uint16_t*)ref, dimension); 
       } else if (t == typeid(uint32_t)) {
-	NGT::Serializer::writeAsText(os, (uint32_t*)ref, dimension); 
+	      NGT::Serializer::writeAsText(os, (uint32_t*)ref, dimension); 
       } else {
-	std::cerr << "Object::serializeAsText: not supported data type. [" << t.name() << "]" << std::endl;
-	assert(0);
+        std::cerr << "Object::serializeAsText: not supported data type. [" << t.name() << "]" << std::endl;
+        assert(0);
       }
     }
     void deserializeAsText(std::ifstream &is, ObjectSpace *objectspace = 0) {

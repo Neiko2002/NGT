@@ -40,32 +40,35 @@ namespace NGT {
     }
 
     void serialize(const std::string &ofile, ObjectSpace *ospace) { 
-      std::ofstream objs(ofile);
+      std::ofstream objs(ofile, std::ios::binary);
       if (!objs.is_open()) {
-	std::stringstream msg;
-	msg << "NGT::ObjectSpace: Cannot open the specified file " << ofile << ".";
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "NGT::ObjectSpace: Cannot open the specified file " << ofile << ".";
+        NGTThrowException(msg);
       }
       Parent::serialize(objs, ospace); 
+      objs.flush();
+      objs.close();
     }
 
     void deserialize(const std::string &ifile, ObjectSpace *ospace) { 
       assert(ospace != 0);
-      std::ifstream objs(ifile);
+      std::ifstream objs(ifile, std::ios::binary);
       if (!objs.is_open()) {
-	std::stringstream msg;
-	msg << "NGT::ObjectSpace: Cannot open the specified file " << ifile << ".";
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "NGT::ObjectSpace: Cannot open the specified file " << ifile << ".";
+        NGTThrowException(msg);
       }
       Parent::deserialize(objs, ospace);
+      objs.close();
     }
 
     void serializeAsText(const std::string &ofile, ObjectSpace *ospace) { 
       std::ofstream objs(ofile);
       if (!objs.is_open()) {
-	std::stringstream msg;
-	msg << "NGT::ObjectSpace: Cannot open the specified file " << ofile << ".";
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "NGT::ObjectSpace: Cannot open the specified file " << ofile << ".";
+        NGTThrowException(msg);
       }
       Parent::serializeAsText(objs, ospace); 
     }

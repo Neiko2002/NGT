@@ -118,12 +118,12 @@ NGT::Index::createGraphAndTree(const string &database, NGT::Property &prop, cons
   }
   prop.indexType = NGT::Index::Property::IndexType::GraphAndTree;
   Index *idx = 0;
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-  mkdir(database);
-  idx = new NGT::GraphAndTreeIndex(database, prop);
-#else
-  idx = new NGT::GraphAndTreeIndex(prop);
-#endif
+  #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+    mkdir(database);
+    idx = new NGT::GraphAndTreeIndex(database, prop);
+  #else
+    idx = new NGT::GraphAndTreeIndex(prop);
+  #endif
   assert(idx != 0);
   StdOstreamRedirector redirector(redirect);
   redirector.begin();
@@ -510,11 +510,11 @@ NGT::GraphIndex::loadIndex(const string &ifile, bool readOnly) {
   if (readOnly && property.indexType == NGT::Index::Property::IndexType::Graph) {
     GraphIndex::NeighborhoodGraph::loadSearchGraph(ifile);
   } else {
-    ifstream isg(ifile + "/grp");
+    ifstream isg(ifile + "/grp", std::ios::binary);
     repository.deserialize(isg);
   }
 #else
-  ifstream isg(ifile + "/grp");
+  ifstream isg(ifile + "/grp", std::ios::binary);
   repository.deserialize(isg);
 #endif
 }
@@ -593,16 +593,16 @@ NGT::GraphIndex::GraphIndex(const string &database, bool rdOnly):readOnly(rdOnly
   assert(prop.dimension != 0);
   initialize(prop);
   loadIndex(database, readOnly);
-#ifdef NGT_GRAPH_READ_ONLY_GRAPH
-  if (prop.searchType == "Large") {
-    searchUnupdatableGraph = NeighborhoodGraph::Search::getMethod(prop.distanceType, prop.objectType, 10000000);
-  } else if (prop.searchType == "Small") {
-    searchUnupdatableGraph = NeighborhoodGraph::Search::getMethod(prop.distanceType, prop.objectType, 0);
-  } else {
-    searchUnupdatableGraph = NeighborhoodGraph::Search::getMethod(prop.distanceType, prop.objectType,
-                                                                  objectSpace->getRepository().size());
-  }
-#endif
+  #ifdef NGT_GRAPH_READ_ONLY_GRAPH
+    if (prop.searchType == "Large") {
+      searchUnupdatableGraph = NeighborhoodGraph::Search::getMethod(prop.distanceType, prop.objectType, 10000000);
+    } else if (prop.searchType == "Small") {
+      searchUnupdatableGraph = NeighborhoodGraph::Search::getMethod(prop.distanceType, prop.objectType, 0);
+    } else {
+      searchUnupdatableGraph = NeighborhoodGraph::Search::getMethod(prop.distanceType, prop.objectType,
+                                                                    objectSpace->getRepository().size());
+    }
+  #endif
 }
 #endif
 
@@ -1187,65 +1187,65 @@ GraphAndTreeIndex::createIndex(size_t threadPoolSize, size_t sizeOfRepository)
       size_t cnt = searchMultipleQueryForCreation(*this, id, job, threads, sizeOfRepository);
 
       if (cnt == 0) {
-	break;
+        break;
       }
       threads.waitForFinish();
 
       if (output.size() != cnt) {
-	cerr << "NNTGIndex::insertGraphIndexByThread: Warning!! Thread response size is wrong." << endl;
-	cnt = output.size();
+        cerr << "NNTGIndex::insertGraphIndexByThread: Warning!! Thread response size is wrong." << endl;
+        cnt = output.size();
       }
 
       insertMultipleSearchResults(*this, output, cnt);
 
       for (size_t i = 0; i < cnt; i++) {
-	CreateIndexJob &job = output[i];
-	if (((job.results->size() > 0) && ((*job.results)[0].distance != 0.0)) ||
-	    (job.results->size() == 0)) {
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	  Object *f = GraphIndex::objectSpace->allocateObject(*job.object);
-	  DVPTree::InsertContainer tiobj(*f, job.id);
-#else
-	  DVPTree::InsertContainer tiobj(*job.object, job.id);
-#endif
-	  try {
-	    DVPTree::insert(tiobj);
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	    GraphIndex::objectSpace->deleteObject(f);
-#endif
-	  } catch (Exception &err) {
-	    cerr << "NGT::createIndex: Fatal error. ID=" << job.id << ":";
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	    GraphIndex::objectSpace->deleteObject(f);
-#endif
-	    if (NeighborhoodGraph::property.graphType == NeighborhoodGraph::GraphTypeKNNG) {
-	      cerr << err.what() << " continue.." << endl;
-	    } else {
-	      throw err;
-	    }
-	  }
-	}
+        CreateIndexJob &job = output[i];
+        if (((job.results->size() > 0) && ((*job.results)[0].distance != 0.0)) || (job.results->size() == 0)) {
+          #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+            Object *f = GraphIndex::objectSpace->allocateObject(*job.object);
+            DVPTree::InsertContainer tiobj(*f, job.id);
+          #else
+            DVPTree::InsertContainer tiobj(*job.object, job.id);
+          #endif
+          
+          try {
+            DVPTree::insert(tiobj);
+            #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+              GraphIndex::objectSpace->deleteObject(f);
+            #endif
+          } catch (Exception &err) {
+            cerr << "NGT::createIndex: Fatal error. ID=" << job.id << ":";
+            #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+              GraphIndex::objectSpace->deleteObject(f);
+            #endif
+            if (NeighborhoodGraph::property.graphType == NeighborhoodGraph::GraphTypeKNNG) {
+              cerr << err.what() << " continue.." << endl;
+            } else {
+              throw err;
+            }
+          }
+        }
       } // for
 
       while (!output.empty()) {
-	delete output.front().results;
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	GraphIndex::objectSpace->deleteObject(output.front().object);
-#endif
-	output.pop_front();
+        delete output.front().results;
+      #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+        GraphIndex::objectSpace->deleteObject(output.front().object);
+      #endif
+        output.pop_front();
       }
 
       count += cnt;
       if (timerCount <= count) {
-	timer.stop();
-	cerr << "Processed " << timerCount << " objects. time= " << timer << endl;
-	timerCount += timerInterval;
-	timer.start();
+        timer.stop();
+        cerr << "Processed " << timerCount << " objects. time= " << timer << endl;
+        timerCount += timerInterval;
+        timer.start();
       }
       buildTimeController.adjustEdgeSize(count);
       if (pathAdjustCount > 0 && pathAdjustCount <= count) {
-	GraphReconstructor::adjustPathsEffectively(static_cast<GraphIndex&>(*this));
-	pathAdjustCount += property.pathAdjustmentInterval;
+        GraphReconstructor::adjustPathsEffectively(static_cast<GraphIndex&>(*this));
+        pathAdjustCount += property.pathAdjustmentInterval;
       }
     }
   } catch(Exception &err) {

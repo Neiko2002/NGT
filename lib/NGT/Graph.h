@@ -934,12 +934,12 @@ namespace NGT {
       }
 
 
-#ifdef NGT_GRAPH_READ_ONLY_GRAPH
+	#ifdef NGT_GRAPH_READ_ONLY_GRAPH
       void loadSearchGraph(const std::string &database) {
-	std::ifstream isg(database + "/grp");
-	NeighborhoodGraph::searchRepository.deserialize(isg, NeighborhoodGraph::getObjectRepository());
+		std::ifstream isg(database + "/grp", std::ios::binary);
+		NeighborhoodGraph::searchRepository.deserialize(isg, NeighborhoodGraph::getObjectRepository());
       }
-#endif
+	#endif
 
     public:
 

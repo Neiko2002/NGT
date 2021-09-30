@@ -448,34 +448,35 @@ namespace NGT {
     NGT::ObjectDistance *getObjectIDs() { return objectIDs; }
 #endif // NGT_SHARED_MEMORY_ALLOCATOR
 
-    void serialize(std::ofstream &os, ObjectSpace *objectspace = 0) {
+void serialize(std::ofstream &os, ObjectSpace *objectspace = 0) {
       Node::serialize(os);
-#ifdef NGT_NODE_USE_VECTOR
-      NGT::Serializer::write(os, objectIDs);
-#else
-      NGT::Serializer::write(os, objectSize);
-      for (int i = 0; i < objectSize; i++) {
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	std::cerr << "not implemented" << std::endl;
-	assert(0);
-#else
-	objectIDs[i].serialize(os);
-#endif
-      }
-#endif // NGT_NODE_USE_VECTOR
+      #ifdef NGT_NODE_USE_VECTOR
+            NGT::Serializer::write(os, objectIDs);
+      #else
+            NGT::Serializer::write(os, objectSize);
+            for (int i = 0; i < objectSize; i++) {
+                  #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+                        std::cerr << "not implemented" << std::endl;
+                        assert(0);
+                  #else
+                        objectIDs[i].serialize(os);
+                  #endif
+            }
+      #endif // NGT_NODE_USE_VECTOR
+
       if (pivot == 0) {
-	// Before insertion, parent ID == 0 and object size == 0, that indicates an empty index
-	if (parent.getID() != 0 || objectSize != 0) {
-	  NGTThrowException("Node::write: pivot is null!");
-	}
+            // Before insertion, parent ID == 0 and object size == 0, that indicates an empty index
+            if (parent.getID() != 0 || objectSize != 0) {
+            NGTThrowException("Node::write: pivot is null!");
+            }
       } else {
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	std::cerr << "not implemented" << std::endl;
-	assert(0);
-#else
-	assert(objectspace != 0);
-	pivot->serialize(os, objectspace);
-#endif
+      #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+            std::cerr << "not implemented" << std::endl;
+            assert(0);
+      #else
+            assert(objectspace != 0);
+            pivot->serialize(os, objectspace);
+      #endif
       }
     }
     void deserialize(std::ifstream &is, ObjectSpace *objectspace = 0) {

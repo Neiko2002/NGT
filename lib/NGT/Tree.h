@@ -72,15 +72,15 @@ namespace NGT {
       leafObjectsSize = LeafNode::LeafObjectsSizeMax;
       internalChildrenSize = InternalNode::InternalChildrenSizeMax;
       splitMode = MaxVariance;
-#ifndef NGT_SHARED_MEMORY_ALLOCATOR
-      insertNode(new LeafNode);
-#endif
+      #ifndef NGT_SHARED_MEMORY_ALLOCATOR
+        insertNode(new LeafNode);
+      #endif
     }
 
     virtual ~DVPTree() {
-#ifndef NGT_SHARED_MEMORY_ALLOCATOR
-      deleteAll();
-#endif
+      #ifndef NGT_SHARED_MEMORY_ALLOCATOR
+        deleteAll();
+      #endif
     }
 
     void deleteAll() {
@@ -244,8 +244,7 @@ namespace NGT {
       return n;
     }
 
-    void
-      removeNode(Node::ID id) {
+    void removeNode(Node::ID id) {
       size_t idx = id.getID();
       if (id.getType() == Node::ID::Leaf) {
 	leafNodes.remove(idx);
@@ -274,8 +273,7 @@ namespace NGT {
       }
       return;
     }
-    void
-      insertNode(LeafNode *n) {
+    void insertNode(LeafNode *n) {
       size_t id = leafNodes.insert(n);
       n->id.setID(id);
       n->id.setType(Node::ID::Leaf);

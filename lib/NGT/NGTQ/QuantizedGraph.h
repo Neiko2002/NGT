@@ -151,13 +151,13 @@ namespace NGTQG {
 
     void save(const string &path) {
       const std::string p(path + "/grp");
-      std::ofstream os(p);
+      std::ofstream os(p, std::ios::binary);
       serialize(os);
     }
 
     void load(const string &path) {
       const std::string p(path + "/grp");
-      std::ifstream is(p);
+      std::ifstream is(p, std::ios::binary);
       deserialize(is);
     }
 

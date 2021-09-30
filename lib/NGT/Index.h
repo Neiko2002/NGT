@@ -387,15 +387,17 @@ namespace NGT {
     }
     void save() {
       if (path.empty()) {
-	NGTThrowException("NGT::Index::saveIndex: path is empty");	
+	      NGTThrowException("NGT::Index::saveIndex: path is empty");	
       }
       saveIndex(path);
     }
+
 #ifndef NGT_SHARED_MEMORY_ALLOCATOR
     void save(std::string indexPath) {
       saveIndex(indexPath);
     }
 #endif
+
     static void mkdir(const std::string &dir) { 
       std::filesystem::create_directories(dir.c_str());
     }
@@ -436,10 +438,10 @@ namespace NGT {
     virtual void createIndex(size_t threadNumber, size_t sizeOfRepository = 0) {
       redirector.begin();
       try {
-	getIndex().createIndex(threadNumber, sizeOfRepository); 
+	      getIndex().createIndex(threadNumber, sizeOfRepository); 
       } catch(Exception &err) {
-	redirector.end();
-	throw err;
+        redirector.end();
+        throw err;
       }
       redirector.end();
     }
@@ -598,32 +600,34 @@ namespace NGT {
 
     virtual void load(const std::string &ifile, size_t dataSize = 0) {
       if (ifile.empty()) {
-	return;
+	      return;
       }
+
       std::istream *is;
       std::ifstream *ifs = 0;
       if (ifile == "-") {
-	is = &std::cin;
+	      is = &std::cin;
       } else {
-	ifs = new std::ifstream;
-	ifs->std::ifstream::open(ifile);
-	if (!(*ifs)) {
-	  std::stringstream msg;
-	  msg << "Index::load: Cannot open the specified file. " << ifile;
-	  NGTThrowException(msg);
-	}
-	is = ifs;
+        ifs = new std::ifstream;
+        ifs->std::ifstream::open(ifile);
+        if (!(*ifs)) {
+          std::stringstream msg;
+          msg << "Index::load: Cannot open the specified file. " << ifile;
+          NGTThrowException(msg);
+        }
+        is = ifs;
       }
+
       try {
-	objectSpace->readText(*is, dataSize);
+	      objectSpace->readText(*is, dataSize);
       } catch(Exception &err) {
-	if (ifile != "-") {
-	  delete ifs;
-	}
-	throw(err);
+        if (ifile != "-") {
+          delete ifs;
+        }
+        throw(err);
       }
       if (ifile != "-") {
-	delete ifs;
+	      delete ifs;
       }
     }
 
@@ -662,29 +666,31 @@ namespace NGT {
     virtual void append(const double *data, size_t dataSize) { objectSpace->append(data, dataSize); }
 
     void saveObjectRepository(const std::string &ofile) {
-#ifndef NGT_SHARED_MEMORY_ALLOCATOR
-      try {
-	mkdir(ofile);
-      } catch(...) {}
-      if (objectSpace != 0) {
-	objectSpace->serialize(ofile + "/obj");
-      } else {
-	std::cerr << "saveIndex::Warning! ObjectSpace is null. continue saving..." << std::endl;
-      }
-#endif
+      #ifndef NGT_SHARED_MEMORY_ALLOCATOR
+        try {
+          mkdir(ofile);
+        } catch(...) {}
+        if (objectSpace != 0) {
+          objectSpace->serialize(ofile + "/obj");
+        } else {
+          std::cerr << "saveIndex::Warning! ObjectSpace is null. continue saving..." << std::endl;
+        }
+      #endif
     }
 
     void saveGraph(const std::string &ofile) {
-#ifndef NGT_SHARED_MEMORY_ALLOCATOR
-      std::string fname = ofile + "/grp";
-      std::ofstream osg(fname);
-      if (!osg.is_open()) {
-	std::stringstream msg;
-	msg << "saveIndex:: Cannot open. " << fname;
-	NGTThrowException(msg);
-      }
-      repository.serialize(osg);
-#endif
+      #ifndef NGT_SHARED_MEMORY_ALLOCATOR
+        std::string fname = ofile + "/grp";
+        std::ofstream osg(fname, std::ios::binary);
+        if (!osg.is_open()) {
+          std::stringstream msg;
+          msg << "saveIndex:: Cannot open. " << fname;
+          NGTThrowException(msg);
+        }
+        repository.serialize(osg);
+        osg.flush();
+        osg.close();
+      #endif
     }
 
     virtual void saveIndex(const std::string &ofile) {
@@ -701,11 +707,11 @@ namespace NGT {
 
     virtual void exportIndex(const std::string &ofile) {
       try {
-	mkdir(ofile);
+	      mkdir(ofile);
       } catch(...) {
-	std::stringstream msg;
-	msg << "exportIndex:: Cannot make the directory. " << ofile;
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "exportIndex:: Cannot make the directory. " << ofile;
+        NGTThrowException(msg);
       }
       objectSpace->serializeAsText(ofile + "/obj");
       std::ofstream osg(ofile + "/grp");
@@ -718,9 +724,9 @@ namespace NGT {
       std::string fname = ifile + "/grp";
       std::ifstream isg(fname);
       if (!isg.is_open()) {
-	std::stringstream msg;
-	msg << "importIndex:: Cannot open. " << fname;
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "importIndex:: Cannot open. " << fname;
+        NGTThrowException(msg);
       }
       repository.deserializeAsText(isg);
     }
@@ -1338,30 +1344,30 @@ namespace NGT {
 
     void saveIndex(const std::string &ofile) {
       GraphIndex::saveIndex(ofile);
-#ifndef NGT_SHARED_MEMORY_ALLOCATOR
-      std::string fname = ofile + "/tre";
-      std::ofstream ost(fname);
-      if (!ost.is_open()) {
-	std::stringstream msg;
-	msg << "saveIndex:: Cannot open. " << fname;
-	NGTThrowException(msg);
-      }
-      DVPTree::serialize(ost);
-#endif
+      #ifndef NGT_SHARED_MEMORY_ALLOCATOR
+        std::string fname = ofile + "/tre";
+        std::ofstream ost(fname, std::ios::binary);
+        if (!ost.is_open()) {
+          std::stringstream msg;
+          msg << "saveIndex:: Cannot open. " << fname;
+          NGTThrowException(msg);
+        }
+        DVPTree::serialize(ost);
+      #endif
     }
 
     void loadIndex(const std::string &ifile, bool readOnly) {
       DVPTree::objectSpace = GraphIndex::objectSpace;
-      std::ifstream ist(ifile + "/tre");
+      std::ifstream ist(ifile + "/tre", std::ios::binary);
       DVPTree::deserialize(ist);
-#ifdef NGT_GRAPH_READ_ONLY_GRAPH
-      if (readOnly) {
-	if (property.objectAlignment == NGT::Index::Property::ObjectAlignmentTrue) {
-	  alignObjects();
-	}
-	GraphIndex::NeighborhoodGraph::loadSearchGraph(ifile);
-      }
-#endif
+      #ifdef NGT_GRAPH_READ_ONLY_GRAPH
+        if (readOnly) {
+          if (property.objectAlignment == NGT::Index::Property::ObjectAlignmentTrue) {
+            alignObjects();
+          }
+          GraphIndex::NeighborhoodGraph::loadSearchGraph(ifile);
+        }
+      #endif
     }
     
     void exportIndex(const std::string &ofile) {
