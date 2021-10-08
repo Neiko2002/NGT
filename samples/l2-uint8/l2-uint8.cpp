@@ -3,8 +3,7 @@
 
 using namespace std;
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   string	indexPath	= "c:/Data/Feature/SIFT1M/NGT/sift5k/anng/";
   string	objectFile	= "c:/Users/Neiko/Documents/HTW/PhD/Cpp/NGT/data/sift-dataset-5k.tsv";
@@ -14,13 +13,16 @@ main(int argc, char **argv)
     NGT::Property	property;
     property.dimension		= 128;
     property.objectType		= NGT::ObjectSpace::ObjectType::Uint8;
+    //property.objectType		= NGT::ObjectSpace::ObjectType::Float;
     property.distanceType	= NGT::Index::Property::DistanceType::DistanceTypeL2;
     NGT::Index::create(indexPath, property);
     NGT::Index	index(indexPath);
+    
     ifstream	is(objectFile);
     string	line;
     while (getline(is, line)) {
       vector<uint8_t>	obj;
+      //vector<float>	obj;
       stringstream	linestream(line);
       while (!linestream.eof()) {
         int value;
@@ -40,6 +42,7 @@ main(int argc, char **argv)
     }
     //index.createIndex(16);
     index.save();
+
   } catch (NGT::Exception &err) {
     cerr << "Error " << err.what() << endl;
     return 1;

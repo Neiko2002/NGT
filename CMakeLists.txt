@@ -16,35 +16,31 @@ string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_BUILD_TYPE_LOWER: ${CMAKE_BUILD_TYPE_LOWER}")
 
+
+
 option(NGT_SHARED_MEMORY_ALLOCATOR "enable shared memory" OFF)
 option(NGT_OPENMP_DISABLED "OpenMP" OFF)
 option(NGT_MARCH_NATIVE_DISABLED "march" OFF)
 option(NGT_AVX_DISABLED "AVX" OFF)
 
-# set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
-# if(CMAKE_BUILD_TYPE_LOWER STREQUAL "release")
-#     set(CMAKE_CXX_FLAGS_RELEASE "")
-#     if(${NGT_MARCH_NATIVE_DISABLED})
-#         message(STATUS "Compile option -march=native is disabled.")
-#         add_compile_options(-O2 -DNDEBUG)
-#     else()
-#         add_compile_options(-Ofast -march=native -DNDEBUG)
-#     endif()
-# endif()
-# add_compile_options(-Wall)
 if(NGT_AVX_DISABLED)
     message(STATUS "AVX will not be used to compute distances.")
 endif()
+
 if(NGT_OPENMP_DISABLED)
     message(STATUS "OpenMP is disabled.")
 else()
     find_package(OpenMP REQUIRED COMPONENTS C CXX)
-    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    if (OPENMP_FOUND)
+        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    endif()
 endif()
-# set(CMAKE_CXX_STANDARD 11) # for std::unordered_set, std::unique_ptr
-# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(Threads REQUIRED)
+
+
 
 add_subdirectory(lib)
 add_subdirectory(bin)

@@ -1,4 +1,5 @@
 add_subdirectory("${PROJECT_SOURCE_DIR}/samples/hamming-uint8")
+add_subdirectory("${PROJECT_SOURCE_DIR}/samples/l2-float")
 add_subdirectory("${PROJECT_SOURCE_DIR}/samples/l2-uint8")
 add_subdirectory("${PROJECT_SOURCE_DIR}/samples/l2-uint8-range-search")
 add_subdirectory("${PROJECT_SOURCE_DIR}/samples/cosine-float")

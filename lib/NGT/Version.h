@@ -18,7 +18,7 @@
 
 #include	<string>
 #include	<ostream>
-#include	"NGT/version_defs.h"
+//#include	"NGT/version_defs.h"
 
 #ifndef NGT_VERSION
 #define NGT_VERSION		"-"
