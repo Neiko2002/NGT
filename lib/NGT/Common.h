@@ -2149,24 +2149,21 @@ namespace NGT {
     }
 
     void start() {
-      startTime = std::chrono::high_resolution_clock::now();
+      startTime = std::chrono::steady_clock::now();
       reset();
     }
 
     void restart() {
-      startTime = std::chrono::high_resolution_clock::now();
+      startTime = std::chrono::steady_clock::now();
     }
 
     void stop() {
-      stopTime = std::chrono::high_resolution_clock::now();
+      stopTime = std::chrono::steady_clock::now();
       sec = std::chrono::duration_cast<std::chrono::seconds>(stopTime - startTime).count();
       nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(stopTime - startTime).count();
-      if (nsec < 0) {
-        sec -= 1;
-        nsec += 1000000000L;
-      }
-      time += (double)sec + (double)nsec / 1000000000.0;
-      ntime += sec * 1000000000L + nsec;
+      
+      time += (double)nsec / 1000000000.0;
+      ntime += nsec;
     }
 
     friend std::ostream &operator<<(std::ostream &os, Timer &t) {
