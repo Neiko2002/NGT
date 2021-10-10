@@ -116,12 +116,12 @@ namespace NGT {
       gtStream.seekg(0, std::ios_base::end);      
       auto pos = gtStream.tellg();
       if (pos == 0) {
-	acc = evaluate(resultStream, type, actualResultSize);
+		acc = evaluate(resultStream, type, actualResultSize);
       } else {
-	SumupValues sumupValues(true); 
-	gtStream.clear();
-	gtStream.seekg(0, std::ios_base::beg);
-	acc = evaluate(gtStream, resultStream, sumupValues, type, actualResultSize);
+		SumupValues sumupValues(true); 
+		gtStream.clear();
+		gtStream.seekg(0, std::ios_base::beg);
+		acc = evaluate(gtStream, resultStream, sumupValues, type, actualResultSize);
       }
 
       assert(acc.size() == 1);
@@ -674,9 +674,9 @@ namespace NGT {
       double distanceCount, visitCount, time;
       calculateMeanValues(accuracies, accuracyRange.first, accuracyRange.second, size, distanceCount, visitCount, time);
       if (distanceCount == 0) {
-	std::stringstream msg;
-	msg << "measureDistance: Error! Distance count is zero.";
-	NGTThrowException(msg);
+		std::stringstream msg;
+		msg << "measureDistance: Error! Distance count is zero.";
+		NGTThrowException(msg);
       }
       MeasuredValue v;
       v.meanVisitCount = visitCount;
@@ -691,8 +691,8 @@ namespace NGT {
       size_t minimumStep = 2;
       size_t baseStartInit = 1;
       while (prevBase != 0) {
-	prevBase >>= 1;
-	baseStartInit <<= 1;
+		prevBase >>= 1;
+		baseStartInit <<= 1;
       }
       baseStartInit >>= 2;
       baseStartInit = baseStartInit < minimumBase ? minimumBase : baseStartInit;
@@ -724,8 +724,7 @@ namespace NGT {
 		    time = values.meanTime;
 		    break;
 		  } catch(NGT::Exception &err) {
-		    if (err.getMessage().find("Error!! Epsilon") != std::string::npos &&
-			err.getMessage().find("is too large") != std::string::npos) {
+		    if (err.getMessage().find("Error!! Epsilon") != std::string::npos && err.getMessage().find("is too large") != std::string::npos) {
 		      std::cerr << "Warning: Cannot adjust the base edge size." << err.what() << std::endl;
 		      std::cerr << "Try again with the next base" << std::endl;
 		      NGTThrowException("**Retry**"); 
@@ -770,11 +769,11 @@ namespace NGT {
     }
 
     size_t adjustBaseSearchEdgeSize(std::pair<float, float> accuracyRange, size_t querySize, double epsilon, float margin = 0.2) {
-      std::cerr << "adjustBaseSearchEdgeSize: Extract queries for GT..." << std::endl;
+      std::cerr << "adjustBaseSearchEdgeSize: Extract queries for ground truth ..." << std::endl;
       std::stringstream queries;
       extractQueries(querySize, queries);
 
-      std::cerr << "adjustBaseSearchEdgeSize: create GT..." << std::endl;
+      std::cerr << "adjustBaseSearchEdgeSize: create ground truth ..." << std::endl;
       Command::SearchParameters searchParameters;
       searchParameters.edgeSize = -1;
       std::stringstream gtStream;
@@ -884,14 +883,14 @@ namespace NGT {
       searchParameters.size = nOfResults;
       redirector.begin();
       try {
-	std::cerr << "adjustSearchEdgeSize: Extract queries for GT..." << std::endl;
-	extractQueries(querySize, queries);
-	std::cerr << "adjustSearchEdgeSize: create GT..." << std::endl;
-	createGroundTruth(index, epsilon, searchParameters, queries, gtStream);
+		std::cerr << "adjustSearchEdgeSize: Extract queries for ground truth..." << std::endl;
+		extractQueries(querySize, queries);
+		std::cerr << "adjustSearchEdgeSize: create ground truth..." << std::endl;
+		createGroundTruth(index, epsilon, searchParameters, queries, gtStream);
       } catch (NGT::Exception &err) {
-	std::cerr << "adjustSearchEdgeSize: Error!! Cannot adjust. " << err.what() << std::endl;
-	redirector.end();
-	return std::pair<size_t, size_t>(0, 0);
+		std::cerr << "adjustSearchEdgeSize: Error!! Cannot adjust. " << err.what() << std::endl;
+		redirector.end();
+		return std::pair<size_t, size_t>(0, 0);
       }
       redirector.end();
 
@@ -974,29 +973,28 @@ namespace NGT {
       size_t querySize = args.getl("q", 100);
       size_t nOfResults = args.getl("n", 10);
 
-      std::cerr << "adjustRateSearchEdgeSize: range= " << baseAccuracyRange.first << "-" << baseAccuracyRange.second 
-	   << "," << rateAccuracyRange.first << "-" << rateAccuracyRange.second << std::endl;
+      std::cerr << "adjustRateSearchEdgeSize: range= " << baseAccuracyRange.first << "-" << baseAccuracyRange.second << "," << rateAccuracyRange.first << "-" << rateAccuracyRange.second << std::endl;
       std::cerr << "adjustRateSearchEdgeSize: # of queries=" << querySize << std::endl;
 
       NGT::Index	index(indexName);
 
       Optimizer		optimizer(index, nOfResults);
       try {
-	auto v = optimizer.adjustSearchEdgeSize(baseAccuracyRange, rateAccuracyRange, querySize, epsilon, margin);
-	NGT::GraphIndex &graphIndex = static_cast<GraphIndex&>(index.getIndex());
-	NeighborhoodGraph::Property &prop = graphIndex.getGraphProperty();
-	if (v.first > 0) {
-	  prop.dynamicEdgeSizeBase = v.first;
-	}
-	if (v.second > 0) {
-	  prop.dynamicEdgeSizeRate = v.second;
-	}
-	if (prop.dynamicEdgeSizeRate > 0 && prop.dynamicEdgeSizeBase > 0) {
-	  graphIndex.saveProperty(indexName);
-	}
+		auto v = optimizer.adjustSearchEdgeSize(baseAccuracyRange, rateAccuracyRange, querySize, epsilon, margin);
+		NGT::GraphIndex &graphIndex = static_cast<GraphIndex&>(index.getIndex());
+		NeighborhoodGraph::Property &prop = graphIndex.getGraphProperty();
+		if (v.first > 0) {
+		prop.dynamicEdgeSizeBase = v.first;
+		}
+		if (v.second > 0) {
+		prop.dynamicEdgeSizeRate = v.second;
+		}
+		if (prop.dynamicEdgeSizeRate > 0 && prop.dynamicEdgeSizeBase > 0) {
+		graphIndex.saveProperty(indexName);
+		}
       } catch (NGT::Exception &err) {
-	std::cerr << "adjustRateSearchEdgeSize: Error!! Cannot adjust. " << err.what() << std::endl;
-	return;
+		std::cerr << "adjustRateSearchEdgeSize: Error!! Cannot adjust. " << err.what() << std::endl;
+		return;
       }
     }
 
@@ -1228,35 +1226,33 @@ namespace NGT {
       NGT::Command::search(index, searchParameters, queries, gtStream);
     }
 
-    static int 
-      calculateMeanValues(std::vector<MeasuredValue> &accuracies, double accuracyRangeFrom, double accuracyRangeTo, 
-			  size_t &size, double &meanDistanceCount, double &meanVisitCount, double &meanTime) {
+    static int calculateMeanValues(std::vector<MeasuredValue> &accuracies, double accuracyRangeFrom, double accuracyRangeTo, size_t &size, double &meanDistanceCount, double &meanVisitCount, double &meanTime) {
       int stat = 0;
       size = 0;
       if (accuracies.front().meanAccuracy > accuracyRangeFrom) {
-	stat = 0x1;
+		stat = 0x1;
       }
       if (accuracies.back().meanAccuracy < accuracyRangeTo) {
-	stat |= 0x2;
+		stat |= 0x2;
       }
       if (stat != 0) {
-	return stat;
+		return stat;
       }
       std::vector<MeasuredValue> acc;
       acc = accuracies;
       for (auto start = acc.rbegin(); start != acc.rend(); ++start) {
-	if ((*start).meanAccuracy <= accuracyRangeFrom) {
-	  ++start;
-	  acc.erase(acc.begin(), start.base());
-	  break;
-	}
+		if ((*start).meanAccuracy <= accuracyRangeFrom) {
+		++start;
+		acc.erase(acc.begin(), start.base());
+		break;
+		}
       }
       for (auto end = acc.begin(); end != acc.end(); ++end) {
-	if ((*end).meanAccuracy >= accuracyRangeTo) {
-	  end++;
-	  acc.erase(end, acc.end());
-	  break;
-	}
+		if ((*end).meanAccuracy >= accuracyRangeTo) {
+		end++;
+		acc.erase(end, acc.end());
+		break;
+		}
       }
       std::vector<std::pair<double, double>> distance;
       std::vector<std::pair<double, double>> visit;
@@ -1492,15 +1488,13 @@ namespace NGT {
       }
     }
 
-    static std::vector<std::pair<float, double>> 
-      generateAccuracyTable(NGT::Index &index, size_t nOfResults = 50, size_t querySize = 100) {
-
+    static std::vector<std::pair<float, double>> generateAccuracyTable(NGT::Index &index, size_t nOfResults = 50, size_t querySize = 100) {
       NGT::Property prop;
       index.getProperty(prop);
       if (prop.edgeSizeForSearch != 0 && prop.edgeSizeForSearch != -2) {
-	std::stringstream msg;
-	msg << "Optimizer::generateAccuracyTable: edgeSizeForSearch is invalid to call generateAccuracyTable, because accuracy 1.0 cannot be achieved with the setting. edgeSizeForSearch=" << prop.edgeSizeForSearch << ".";
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "Optimizer::generateAccuracyTable: edgeSizeForSearch is invalid to call generateAccuracyTable, because accuracy 1.0 cannot be achieved with the setting. edgeSizeForSearch="  << prop.edgeSizeForSearch << ".";
+        NGTThrowException(msg);
       }
 
       NGT::Optimizer optimizer(index, nOfResults);
@@ -1513,60 +1507,59 @@ namespace NGT {
 
       std::map<float, double> map;
       {
-	float interval = 0.05;
-	float prev = 0.0;
-	std::vector<NGT::Optimizer::MeasuredValue> acc;
-	float epsilon = -0.6;
-	double accuracy;
-	do {
-	  auto pair = map.find(epsilon);
-	  if (pair == map.end()) {
-	    NGT::Command::SearchParameters searchParameters;
-	    searchParameters.outputMode = 'e';
-	    searchParameters.beginOfEpsilon = searchParameters.endOfEpsilon = epsilon;
-	    queryStream.clear();
-	    queryStream.seekg(0, std::ios_base::beg);
-	    NGT::Optimizer::search(index, queryStream, gtStream, searchParameters, acc);
-	    if (acc.size() == 0) {
-	      NGTThrowException("Fatal error! Cannot get any accuracy value.");
-	    }
-	    accuracy = acc[0].meanAccuracy;
-	    map.insert(std::make_pair(epsilon, accuracy));
-	  } else {
-	    accuracy = (*pair).second;
-	  }
-	  if (prev != 0.0) {
-	    if (accuracy - prev < 0.02) {
-	      interval *= 2.0;
-	    } else if (accuracy - prev > 0.05 && interval > 0.0001) {
-	      
-	      epsilon -= interval;
-	      interval /= 2.0;
-	      accuracy = prev;
-	    }
-	  }
-	  prev = accuracy;
-	  epsilon += interval;
-	  if (accuracy > 0.98 && epsilon > maxEpsilon) {
-	    break;
-	  }
-	} while (accuracy < 1.0);
+        float interval = 0.05f;
+        float prev = 0.0f;
+        std::vector<NGT::Optimizer::MeasuredValue> acc;
+        float epsilon = -0.6f;
+        double accuracy;
+        do {
+          auto pair = map.find(epsilon);
+          if (pair == map.end()) {
+            NGT::Command::SearchParameters searchParameters;
+            searchParameters.outputMode = 'e';
+            searchParameters.beginOfEpsilon = searchParameters.endOfEpsilon = epsilon;
+            queryStream.clear();
+            queryStream.seekg(0, std::ios_base::beg);
+            NGT::Optimizer::search(index, queryStream, gtStream, searchParameters, acc);
+            if (acc.size() == 0) {
+              NGTThrowException("Fatal error! Cannot get any accuracy value.");
+            }
+            accuracy = acc[0].meanAccuracy;
+            map.insert(std::make_pair(epsilon, accuracy));
+          } else {
+            accuracy = (*pair).second;
+          }
+          if (prev != 0.0) {
+            if (accuracy - prev < 0.02) {
+              interval *= 2.0;
+            } else if (accuracy - prev > 0.05 && interval > 0.0001) {
+              epsilon -= interval;
+              interval /= 2.0;
+              accuracy = prev;
+            }
+          }
+          prev = accuracy;
+          epsilon += interval;
+          if (accuracy > 0.98 && epsilon > maxEpsilon) {
+            break;
+          }
+        } while (accuracy < 1.0);
       }
 
       std::vector<std::pair<float, double>> epsilonAccuracyMap;
       std::pair<float, double> prev(0.0f, -1.0);
       for (auto i = map.begin(); i != map.end(); ++i) {
-	if (fabs((*i).first - prev.first) <= FLT_EPSILON) {
-	  continue;
-	}
-	if ((*i).second - prev.second < DBL_EPSILON) {
-	  continue;
-	}
-	epsilonAccuracyMap.push_back(*i);
-	if ((*i).second >= 1.0) {
-	  break;
-	}
-	prev = *i;
+        if (fabs((*i).first - prev.first) <= FLT_EPSILON) {
+          continue;
+        }
+        if ((*i).second - prev.second < DBL_EPSILON) {
+          continue;
+        }
+        epsilonAccuracyMap.push_back(*i);
+        if ((*i).second >= 1.0) {
+          break;
+        }
+        prev = *i;
       }
 
       return epsilonAccuracyMap;

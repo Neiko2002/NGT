@@ -319,35 +319,33 @@ namespace NGTQG {
 
     }
 
-
-
     void search(NGT::GraphIndex &index, NGTQG::SearchContainer &sc, NGT::ObjectDistances &seeds) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
       NGTThrowException("NGTQG is not available for SHARED.");
 #endif
       if (index.getReadOnly()) {
-	NGTThrowException("NGTQG is not available for readonly mode.");
+        NGTThrowException("NGTQG is not available for readonly mode.");
       }
       if (sc.size == 0) {
-	while (!sc.workingResult.empty()) sc.workingResult.pop();
-	return;
+        while (!sc.workingResult.empty()) sc.workingResult.pop();
+        return;
       }
       if (seeds.size() == 0) {
-	index.getSeedsFromGraph(index.repository, seeds);
+        index.getSeedsFromGraph(index.repository, seeds);
       }
       if (sc.expectedAccuracy > 0.0) {
-	sc.setEpsilon(getEpsilonFromExpectedAccuracy(sc.expectedAccuracy));
+        sc.setEpsilon(getEpsilonFromExpectedAccuracy(sc.expectedAccuracy));
       }
       try {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR) || !defined(NGT_GRAPH_READ_ONLY_GRAPH)
-	index.NeighborhoodGraph::search(sc, seeds);
+        index.NeighborhoodGraph::search(sc, seeds);
 #else
-	searchQuantizedGraph(static_cast<NGT::NeighborhoodGraph&>(index), sc, seeds);
+        searchQuantizedGraph(static_cast<NGT::NeighborhoodGraph &>(index), sc, seeds);
 #endif
-      } catch(NGT::Exception &err) {
-	std::cerr << err.what() << std::endl;
-	NGT::Exception e(err);
-	throw e;
+      } catch (NGT::Exception &err) {
+        std::cerr << err.what() << std::endl;
+        NGT::Exception e(err);
+        throw e;
       }
     }
 

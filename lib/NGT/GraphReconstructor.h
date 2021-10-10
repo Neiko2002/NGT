@@ -193,29 +193,26 @@ class GraphReconstructor {
   }
 #endif
 
-
-  static void 
-    adjustPathsEffectively(NGT::GraphIndex &outGraph,
-			   size_t minNoOfEdges) 
-  {
+  static void adjustPathsEffectively(NGT::GraphIndex &outGraph,
+                                     size_t minNoOfEdges) {
     Timer timer;
     timer.start();
     std::vector<NGT::GraphNode> tmpGraph;
     for (size_t id = 1; id < outGraph.repository.size(); id++) {
       try {
-	NGT::GraphNode &node = *outGraph.getNode(id);
-	tmpGraph.push_back(node);
+        NGT::GraphNode &node = *outGraph.getNode(id);
+        tmpGraph.push_back(node);
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	node.clear(outGraph.repository.allocator);
+        node.clear(outGraph.repository.allocator);
 #else
-	node.clear();
+        node.clear();
 #endif
-      } catch(NGT::Exception &err) {
-	std::cerr << "GraphReconstructor: Warning. Cannot get the node. ID=" << id << ":" << err.what() << std::endl;
+      } catch (NGT::Exception &err) {
+        std::cerr << "GraphReconstructor: Warning. Cannot get the node. ID=" << id << ":" << err.what() << std::endl;
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	tmpGraph.push_back(NGT::GraphNode(outGraph.repository.allocator));
+        tmpGraph.push_back(NGT::GraphNode(outGraph.repository.allocator));
 #else
-	tmpGraph.push_back(NGT::GraphNode());
+        tmpGraph.push_back(NGT::GraphNode());
 #endif
       }
     }
@@ -229,7 +226,7 @@ class GraphReconstructor {
     timer.reset();
     timer.start();
 
-    std::vector<std::vector<std::pair<uint32_t, uint32_t> > > removeCandidates(tmpGraph.size());
+    std::vector<std::vector<std::pair<uint32_t, uint32_t>>> removeCandidates(tmpGraph.size());
     int removeCandidateCount = 0;
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -238,58 +235,52 @@ class GraphReconstructor {
       auto it = tmpGraph.begin() + idx;
       size_t id = idx + 1;
       try {
-	NGT::GraphNode &srcNode = *it;	
-	std::unordered_map<uint32_t, std::pair<size_t, double> > neighbors;
-	for (size_t sni = 0; sni < srcNode.size(); ++sni) {
+        NGT::GraphNode &srcNode = *it;
+        std::unordered_map<uint32_t, std::pair<size_t, double>> neighbors;
+        for (size_t sni = 0; sni < srcNode.size(); ++sni) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  neighbors[srcNode.at(sni, outGraph.repository.allocator).id] = std::pair<size_t, double>(sni, srcNode.at(sni, outGraph.repository.allocator).distance);
+          neighbors[srcNode.at(sni, outGraph.repository.allocator).id] = std::pair<size_t, double>(sni, srcNode.at(sni, outGraph.repository.allocator).distance);
 #else
-	  neighbors[srcNode[sni].id] = std::pair<size_t, double>(sni, srcNode[sni].distance);
+          neighbors[srcNode[sni].id] = std::pair<size_t, double>(sni, srcNode[sni].distance);
 #endif
-	}
+        }
 
-	std::vector<std::pair<int, std::pair<uint32_t, uint32_t> > > candidates;	
-	for (size_t sni = 0; sni < srcNode.size(); sni++) { 
+        std::vector<std::pair<int, std::pair<uint32_t, uint32_t>>> candidates;
+        for (size_t sni = 0; sni < srcNode.size(); sni++) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  NGT::GraphNode &pathNode = tmpGraph[srcNode.at(sni, outGraph.repository.allocator).id - 1];
+          NGT::GraphNode &pathNode = tmpGraph[srcNode.at(sni, outGraph.repository.allocator).id - 1];
 #else
-	  NGT::GraphNode &pathNode = tmpGraph[srcNode[sni].id - 1];
+          NGT::GraphNode &pathNode = tmpGraph[srcNode[sni].id - 1];
 #endif
-	  for (size_t pni = 0; pni < pathNode.size(); pni++) {
+          for (size_t pni = 0; pni < pathNode.size(); pni++) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	    auto dstNodeID = pathNode.at(pni, outGraph.repository.allocator).id;
+            auto dstNodeID = pathNode.at(pni, outGraph.repository.allocator).id;
 #else
-	    auto dstNodeID = pathNode[pni].id;
+            auto dstNodeID = pathNode[pni].id;
 #endif
-	    auto dstNode = neighbors.find(dstNodeID);
+            auto dstNode = neighbors.find(dstNodeID);
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	    if (dstNode != neighbors.end() 
-		&& srcNode.at(sni, outGraph.repository.allocator).distance < (*dstNode).second.second 
-		&& pathNode.at(pni, outGraph.repository.allocator).distance < (*dstNode).second.second  
-		) {
+            if (dstNode != neighbors.end() && srcNode.at(sni, outGraph.repository.allocator).distance < (*dstNode).second.second && pathNode.at(pni, outGraph.repository.allocator).distance < (*dstNode).second.second) {
 #else
-	    if (dstNode != neighbors.end() 
-		&& srcNode[sni].distance < (*dstNode).second.second 
-		&& pathNode[pni].distance < (*dstNode).second.second  
-		) {
+            if (dstNode != neighbors.end() && srcNode[sni].distance < (*dstNode).second.second && pathNode[pni].distance < (*dstNode).second.second) {
 #endif
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	      candidates.push_back(std::pair<int, std::pair<uint32_t, uint32_t> >((*dstNode).second.first, std::pair<uint32_t, uint32_t>(srcNode.at(sni, outGraph.repository.allocator).id, dstNodeID)));  
+              candidates.push_back(std::pair<int, std::pair<uint32_t, uint32_t>>((*dstNode).second.first, std::pair<uint32_t, uint32_t>(srcNode.at(sni, outGraph.repository.allocator).id, dstNodeID)));
 #else
-	      candidates.push_back({static_cast<uint32_t>((*dstNode).second.first), std::pair<uint32_t, uint32_t>(srcNode[sni].id, dstNodeID)});  
+              candidates.push_back({static_cast<uint32_t>((*dstNode).second.first), std::pair<uint32_t, uint32_t>(srcNode[sni].id, dstNodeID)});
 #endif
-	      removeCandidateCount++;
-	    }
-	  }
-	}
-	sort(candidates.begin(), candidates.end(), std::greater<std::pair<int, std::pair<uint32_t, uint32_t>>>());
-	removeCandidates[id - 1].reserve(candidates.size());
-	for (size_t i = 0; i < candidates.size(); i++) {
-	  removeCandidates[id - 1].push_back(candidates[i].second);
-	}
-      } catch(NGT::Exception &err) {
-	std::cerr << "GraphReconstructor: Warning. Cannot get the node. ID=" << id << ":" << err.what() << std::endl;
-	continue;
+              removeCandidateCount++;
+            }
+          }
+        }
+        sort(candidates.begin(), candidates.end(), std::greater<std::pair<int, std::pair<uint32_t, uint32_t>>>());
+        removeCandidates[id - 1].reserve(candidates.size());
+        for (size_t i = 0; i < candidates.size(); i++) {
+          removeCandidates[id - 1].push_back(candidates[i].second);
+        }
+      } catch (NGT::Exception &err) {
+        std::cerr << "GraphReconstructor: Warning. Cannot get the node. ID=" << id << ":" << err.what() << std::endl;
+        continue;
       }
     }
     timer.stop();
@@ -305,86 +296,87 @@ class GraphReconstructor {
     int removeCount = 0;
     removeCandidateCount = 0;
     for (size_t rank = 0; ids.size() != 0; rank++) {
-      for (auto it = ids.begin(); it != ids.end(); ) {
-	size_t id = *it;
-	size_t idx = id - 1;
-	try {
-	  NGT::GraphNode &srcNode = tmpGraph[idx];
-	  if (rank >= srcNode.size()) {
-	    if (!removeCandidates[idx].empty() && minNoOfEdges == 0) {
-	      std::cerr << "Something wrong! ID=" << id << " # of remaining candidates=" << removeCandidates[idx].size() << std::endl;
-	      abort();
-	    }
+      for (auto it = ids.begin(); it != ids.end();) {
+        size_t id = *it;
+        size_t idx = id - 1;
+        try {
+          NGT::GraphNode &srcNode = tmpGraph[idx];
+          if (rank >= srcNode.size()) {
+            if (!removeCandidates[idx].empty() && minNoOfEdges == 0) {
+              std::cerr << "Something wrong! ID=" << id << " # of remaining candidates=" << removeCandidates[idx].size() << std::endl;
+              abort();
+            }
 #if !defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	    NGT::GraphNode empty;
+            NGT::GraphNode empty;
             tmpGraph[idx] = empty;
 #endif
-	    it = ids.erase(it);
-	    continue;
-	  }
-	  if (removeCandidates[idx].size() > 0 && ((*outGraph.getNode(id)).size() + srcNode.size() - rank) > minNoOfEdges) {
-	    removeCandidateCount++;
-	    bool pathExist = false;
+            it = ids.erase(it);
+            continue;
+          }
+		  
+          if (removeCandidates[idx].size() > 0 && ((*outGraph.getNode(id)).size() + srcNode.size() - rank) > minNoOfEdges) {
+            removeCandidateCount++;
+            bool pathExist = false;
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
             while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode.at(rank, outGraph.repository.allocator).id)) {
 #else
-	    while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
+            while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
 #endif
-	      size_t path = removeCandidates[idx].back().first;
-	      size_t dst = removeCandidates[idx].back().second;
-	      removeCandidates[idx].pop_back();
- 	      if (removeCandidates[idx].empty()) {
- 	        std::vector<std::pair<uint32_t, uint32_t>> empty;
- 		removeCandidates[idx] = empty;
- 	      }
+              size_t path = removeCandidates[idx].back().first;
+              size_t dst = removeCandidates[idx].back().second;
+              removeCandidates[idx].pop_back();
+              if (removeCandidates[idx].empty()) {
+                std::vector<std::pair<uint32_t, uint32_t>> empty;
+                removeCandidates[idx] = empty;
+              }
               if ((hasEdge(outGraph, id, path)) && (hasEdge(outGraph, path, dst))) {
-		pathExist = true;
+                pathExist = true;
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	        while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode.at(rank, outGraph.repository.allocator).id)) {
+                while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode.at(rank, outGraph.repository.allocator).id)) {
 #else
-		while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
+                while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
 #endif
-	          removeCandidates[idx].pop_back();
- 	          if (removeCandidates[idx].empty()) {
- 	            std::vector<std::pair<uint32_t, uint32_t>> empty;
- 		    removeCandidates[idx] = empty;
- 	          }
-		}
-		break;
-	      }
-	    }
-	    if (pathExist) {
-	      removeCount++;
+                  removeCandidates[idx].pop_back();
+                  if (removeCandidates[idx].empty()) {
+                    std::vector<std::pair<uint32_t, uint32_t>> empty;
+                    removeCandidates[idx] = empty;
+                  }
+                }
+                break;
+              }
+            }
+            if (pathExist) {
+              removeCount++;
               it++;
-	      continue;
-	    }
-	  }
-	  NGT::GraphNode &outSrcNode = *outGraph.getNode(id);
+              continue;
+            }
+          }
+          NGT::GraphNode &outSrcNode = *outGraph.getNode(id);
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  insert(outSrcNode, srcNode.at(rank, outGraph.repository.allocator).id, srcNode.at(rank, outGraph.repository.allocator).distance, outGraph);
+          insert(outSrcNode, srcNode.at(rank, outGraph.repository.allocator).id, srcNode.at(rank, outGraph.repository.allocator).distance, outGraph);
 #else
-	  insert(outSrcNode, srcNode[rank].id, srcNode[rank].distance);
+          insert(outSrcNode, srcNode[rank].id, srcNode[rank].distance);
 #endif
-	} catch(NGT::Exception &err) {
-	  std::cerr << "GraphReconstructor: Warning. Cannot get the node. ID=" << id << ":" << err.what() << std::endl;
+        } catch (NGT::Exception &err) {
+          std::cerr << "GraphReconstructor: Warning. Cannot get the node. ID=" << id << ":" << err.what() << std::endl;
           it++;
-	  continue;
-	}
+          continue;
+        }
         it++;
       }
     }
     for (size_t id = 1; id < outGraph.repository.size(); id++) {
       try {
-	NGT::GraphNode &node = *outGraph.getNode(id);
+        NGT::GraphNode &node = *outGraph.getNode(id);
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	std::sort(node.begin(outGraph.repository.allocator), node.end(outGraph.repository.allocator));
+        std::sort(node.begin(outGraph.repository.allocator), node.end(outGraph.repository.allocator));
 #else
-	std::sort(node.begin(), node.end());
+        std::sort(node.begin(), node.end());
 #endif
-      } catch(...) {}
+      } catch (...) {
+      }
     }
   }
-
 
   static 
     void convertToANNG(std::vector<NGT::ObjectDistances> &graph)
@@ -823,107 +815,107 @@ class GraphReconstructor {
     std::string errorMessage;
 
     size_t noOfSearchedEdges = noOfEdges < 0 ? -noOfEdges : (noOfEdges > prop.edgeSizeForCreation ? noOfEdges : prop.edgeSizeForCreation);
-	std::vector<NGT::ObjectDistances> results(batchSize);
+    std::vector<NGT::ObjectDistances> results(batchSize);
     for (size_t bid = 1; bid < nOfObjects; bid += batchSize) {
       // search
 #pragma omp parallel for
       for (int64_t idx = 0; idx < static_cast<int64_t>(batchSize); idx++) {
-	size_t id = bid + idx;
-	if (id % 100000 == 0) {
-	  std::cerr << "# of processed objects=" << id << std::endl;
-	}
-	if (objectRepository.isEmpty(id)) {
-	  continue;
-	}
-	NGT::SearchContainer searchContainer(*objectRepository.get(id));
-	searchContainer.setResults(&results[idx]);
-	assert(prop.edgeSizeForCreation > 0);
-	searchContainer.setSize(noOfSearchedEdges);
-	if (accuracy > 0.0) {
+        size_t id = bid + idx;
+        if (id % 100000 == 0) {
+          std::cerr << "# of processed objects=" << id << std::endl;
+        }
+        if (objectRepository.isEmpty(id)) {
+          continue;
+        }
+        NGT::SearchContainer searchContainer(*objectRepository.get(id));
+        searchContainer.setResults(&results[idx]);
+        assert(prop.edgeSizeForCreation > 0);
+        searchContainer.setSize(noOfSearchedEdges);
+        if (accuracy > 0.0) {
           searchContainer.setExpectedAccuracy(accuracy);
         } else {
-	  searchContainer.setEpsilon(epsilon);
+          searchContainer.setEpsilon(epsilon);
         }
-	if (exploreEdgeSize != INT_MIN) {
+        if (exploreEdgeSize != INT_MIN) {
           searchContainer.setEdgeSize(exploreEdgeSize);
         }
-	if (!error) {
+        if (!error) {
           try {
             index.search(searchContainer);
           } catch (NGT::Exception &err) {
 #pragma omp critical
             {
-      	      error = true;
-	      errorMessage = err.what();
+              error = true;
+              errorMessage = err.what();
             }
           }
         }
       }
       if (error) {
         std::stringstream msg;
-	msg << "GraphReconstructor::refineANNG: " << errorMessage;
+        msg << "GraphReconstructor::refineANNG: " << errorMessage;
         NGTThrowException(msg);
       }
       // outgoing edges
 #pragma omp parallel for
       for (int64_t idx = 0; idx < static_cast<int64_t>(batchSize); idx++) {
-	size_t id = bid + idx;
-	if (objectRepository.isEmpty(id)) {
-	  continue;
-	}
-	NGT::GraphNode &node = *graphIndex.getNode(id);
-	for (auto i = results[idx].begin(); i != results[idx].end(); ++i) {
-	  if ((*i).id != id) {
-	    node.push_back(*i);
-	  }
-	}
-	std::sort(node.begin(), node.end());
-	// dedupe
-	ObjectID prev = 0;
-	for (GraphNode::iterator ni = node.begin(); ni != node.end();) {
-	  if (prev == (*ni).id) {
-	    ni = node.erase(ni);
-	    continue;
-	  }
-	  prev = (*ni).id;
-	  ni++;
-	}
+        size_t id = bid + idx;
+        if (objectRepository.isEmpty(id)) {
+          continue;
+        }
+        NGT::GraphNode &node = *graphIndex.getNode(id);
+        for (auto i = results[idx].begin(); i != results[idx].end(); ++i) {
+          if ((*i).id != id) {
+            node.push_back(*i);
+          }
+        }
+        std::sort(node.begin(), node.end());
+        // dedupe
+        ObjectID prev = 0;
+        for (GraphNode::iterator ni = node.begin(); ni != node.end();) {
+          if (prev == (*ni).id) {
+            ni = node.erase(ni);
+            continue;
+          }
+          prev = (*ni).id;
+          ni++;
+        }
       }
       // incomming edges
       if (noOfEdges != 0) {
-	continue;
+        continue;
       }
       for (size_t idx = 0; idx < batchSize; idx++) {
-	size_t id = bid + idx;
-	if (id % 10000 == 0) {
-	  std::cerr << "# of processed objects=" << id << std::endl;
-	}
-	for (auto i = results[idx].begin(); i != results[idx].end(); ++i) {
-	  if ((*i).id != id) {
-	    NGT::GraphNode &node = *graphIndex.getNode((*i).id);
-	    graphIndex.addEdge(node, id, (*i).distance, false);
-	  }
-	}
+        size_t id = bid + idx;
+        if (id % 10000 == 0) {
+          std::cerr << "# of processed objects=" << id << std::endl;
+        }
+        for (auto i = results[idx].begin(); i != results[idx].end(); ++i) {
+          if ((*i).id != id) {
+            NGT::GraphNode &node = *graphIndex.getNode((*i).id);
+            graphIndex.addEdge(node, id, (*i).distance, false);
+          }
+        }
       }
-	  for(auto&& res : results) {
-		  res.clear();
-	  }
+      for (auto &&res : results) {
+        res.clear();
+      }
     }
     if (noOfEdges > 0) {
       // prune to build knng
-      size_t  nedges = noOfEdges < 0 ? -noOfEdges : noOfEdges;
+      size_t nedges = noOfEdges < 0 ? -noOfEdges : noOfEdges;
 #pragma omp parallel for
       for (int64_t id = 1; id < static_cast<int64_t>(nOfObjects); ++id) {
         if (objectRepository.isEmpty(id)) {
-	  continue;
+          continue;
         }
-	NGT::GraphNode &node = *graphIndex.getNode(id);
-	if (node.size() > nedges) {
-	  node.resize(nedges);
+        NGT::GraphNode &node = *graphIndex.getNode(id);
+        if (node.size() > nedges) {
+          node.resize(nedges);
         }
       }
     }
-#endif // defined(NGT_SHARED_MEMORY_ALLOCATOR)
+#endif  // defined(NGT_SHARED_MEMORY_ALLOCATOR)
   }
 };
 

@@ -1140,52 +1140,52 @@ namespace NGT {
     }
 
   protected:
-
-    // GraphIndex
-    virtual void search(NGT::SearchContainer &sc, ObjectDistances &seeds) {
-      if (sc.size == 0) {
-	while (!sc.workingResult.empty()) sc.workingResult.pop();
-	return;
-      }
-      if (seeds.size() == 0) {
+  
+   // GraphIndex
+   virtual void search(NGT::SearchContainer &sc, ObjectDistances &seeds) {
+     if (sc.size == 0) {
+       while (!sc.workingResult.empty()) sc.workingResult.pop();
+       return;
+     }
+     if (seeds.size() == 0) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR) || !defined(NGT_GRAPH_READ_ONLY_GRAPH)
-	getSeedsFromGraph(repository, seeds);
+       getSeedsFromGraph(repository, seeds);
 #else
-	if (readOnly) {
-	  getSeedsFromGraph(searchRepository, seeds);
-	} else {
-	  getSeedsFromGraph(repository, seeds);
-	}
+       if (readOnly) {
+         getSeedsFromGraph(searchRepository, seeds);
+       } else {
+         getSeedsFromGraph(repository, seeds);
+       }
 #endif
-      }
-      if (sc.expectedAccuracy > 0.0) {
-	sc.setEpsilon(getEpsilonFromExpectedAccuracy(sc.expectedAccuracy));
-      }
+     }
+     if (sc.expectedAccuracy > 0.0) {
+       sc.setEpsilon(getEpsilonFromExpectedAccuracy(sc.expectedAccuracy));
+     }
 
-      NGT::SearchContainer so(sc);
-      try {
-	if (readOnly) {
+     NGT::SearchContainer so(sc);
+     try {
+       if (readOnly) {
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR) || !defined(NGT_GRAPH_READ_ONLY_GRAPH)
-	  NeighborhoodGraph::search(so, seeds);
+         NeighborhoodGraph::search(so, seeds);
 #else
-	  (*searchUnupdatableGraph)(*this, so, seeds);
+         (*searchUnupdatableGraph)(*this, so, seeds);
 #endif
-	} else {
-	  NeighborhoodGraph::search(so, seeds);
-	}
-	sc.workingResult = std::move(so.workingResult);
-	sc.distanceComputationCount = so.distanceComputationCount;
-	sc.visitCount = so.visitCount;
-      } catch(Exception &err) {
-	std::cerr << err.what() << std::endl;
-	Exception e(err);
-	throw e;
-      }
-    }
+       } else {
+         NeighborhoodGraph::search(so, seeds);
+       }
+       sc.workingResult = std::move(so.workingResult);
+       sc.distanceComputationCount = so.distanceComputationCount;
+       sc.visitCount = so.visitCount;
+     } catch (Exception &err) {
+       std::cerr << err.what() << std::endl;
+       Exception e(err);
+       throw e;
+     }
+   }
 
-    Index::Property			property;
+   Index::Property property;
 
-    bool readOnly;
+   bool readOnly;
 #ifdef NGT_GRAPH_READ_ONLY_GRAPH
     void (*searchUnupdatableGraph)(NGT::NeighborhoodGraph&, NGT::SearchContainer&, NGT::ObjectDistances&);
 #endif
@@ -1467,19 +1467,18 @@ namespace NGT {
       sc.explorationCoefficient = NeighborhoodGraph::property.insertionRadiusCoefficient;
       sc.useAllNodesInLeaf = true;
       try {
-	GraphAndTreeIndex::search(sc);
-      } catch(Exception &err) {
-	throw err;
+        GraphAndTreeIndex::search(sc);
+      } catch (Exception &err) {
+        throw err;
       }
-      if (static_cast<int>(result.size()) < NeighborhoodGraph::property.edgeSizeForCreation && 
-	  result.size() < repository.size()) {
-	if (sc.edgeSize != 0) {
-	  try {
-	    GraphAndTreeIndex::search(sc);
-	  } catch(Exception &err) {
-	    throw err;
-	  }
-	}
+      if (static_cast<int>(result.size()) < NeighborhoodGraph::property.edgeSizeForCreation && result.size() < repository.size()) {
+        if (sc.edgeSize != 0) {
+          try {
+            GraphAndTreeIndex::search(sc);
+          } catch (Exception &err) {
+            throw err;
+          }
+        }
       }
     }
 
@@ -1588,11 +1587,11 @@ namespace NGT {
         sc.distanceComputationCount = 0;
         sc.visitCount = 0;
         ObjectDistances	seeds;
-	getSeedsFromTree(sc, seeds);
-	GraphIndex::search(sc, seeds);
+        getSeedsFromTree(sc, seeds);
+        GraphIndex::search(sc, seeds);
       } catch(Exception &err) {
-	deleteObject(query);
-	throw err;
+        deleteObject(query);
+        throw err;
       }
       deleteObject(query);
     }
