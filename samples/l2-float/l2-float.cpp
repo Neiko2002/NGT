@@ -73,6 +73,16 @@ int createANNGIndex(const char * indexPath, const char * featurePath, const int 
     property.objectType		= NGT::ObjectSpace::ObjectType::Float;
     property.distanceType	= NGT::Index::Property::DistanceType::DistanceTypeL2;
     property.threadPoolSize = threadNumber;
+    property.insertionRadiusCoefficient = 1.03;
+
+    // WEAVES verwendet undirected eges 
+    // https://github.com/Lsyhprum/WEAVESS/tree/dev/parameters
+    // https://github.com/Lsyhprum/WEAVESS/blob/master/test/main.cpp#L233
+    // https://github.com/Lsyhprum/WEAVESS/blob/master/src/component_init.cpp#L1287
+    // property.unknown = 200;             // K is nn (ANNG parameter)
+    // property.edgeSizeForCreation = 230; // L is ef_construction (ANNG parameter)
+    // property.outgoingEdge = 30;         // out (ONNG parameter)
+    // property.incomingEdge = 100;        // in (ONNG parameter)
 
     std::cout << "Start creating ANNG index files" << std::endl;
     NGT::Index::create(indexPath, property);
@@ -112,7 +122,7 @@ int createANNGIndex(const char * indexPath, const char * featurePath, const int 
 
 
 // index construction
-int refineANNGIndex(const char * anngIndexPath, const char * rnngIndexPath, const int edgeSizeForCreation) {
+int refineANNGIndex(const char * anngIndexPath, const char * rnngIndexPath, const int edgeSizeForCreation, const int threadNumber) {
   try {
 
     std::cout << "Load ANNG index files" << std::endl;
@@ -125,7 +135,7 @@ int refineANNGIndex(const char * anngIndexPath, const char * rnngIndexPath, cons
     index.getProperty(property);
     property.edgeSizeForCreation = edgeSizeForCreation; 
     property.objectAlignment = NGT::Index::Property::ObjectAlignment::ObjectAlignmentTrue;
-    property.threadPoolSize = 1;
+    property.threadPoolSize = threadNumber;
     property.outgoingEdge = 10;
     property.outgoingEdge = 120;
     property.dynamicEdgeSizeBase = 10;
@@ -159,6 +169,49 @@ int refineANNGIndex(const char * anngIndexPath, const char * rnngIndexPath, cons
   return 0;
 }
 
+int reconstructONNGIndex(const char * anngIndexPath, const char * onngIndexPath) {
+  try {
+
+    // ngt reconstruct-graph -m S -o outdegree -i indegree anng-index onng-index
+    // https://github.com/yahoojapan/NGT/blob/master/lib/NGT/Command.cpp#L700
+    std::cout << "Convert ANNG to ONNG" << std::endl;
+    {
+      auto time_begin = std::chrono::steady_clock::now();
+
+      NGT::GraphOptimizer graphOptimizer(false);
+      graphOptimizer.shortcutReduction = true;
+      graphOptimizer.searchParameterOptimization = true;
+      graphOptimizer.prefetchParameterOptimization = true;
+      graphOptimizer.accuracyTableGeneration = false;
+      graphOptimizer.minNumOfEdges =  0;
+      graphOptimizer.gtEpsilon = 0.1;    // eps for searching the ground truth data
+      graphOptimizer.margin = 0.3;       // 
+
+      graphOptimizer.numOfQueries = 100;  // # of ground truth objects
+      graphOptimizer.numOfResults = 100;  // # of resultant objects
+
+      graphOptimizer.numOfOutgoingEdges = 50;
+      graphOptimizer.numOfIncomingEdges = 150;
+
+      graphOptimizer.execute(std::string(anngIndexPath), std::string(onngIndexPath));
+      
+
+      auto time_end = std::chrono::steady_clock::now();
+      auto time_per_seconds = std::chrono::duration_cast<std::chrono::seconds>(time_end - time_begin).count();
+      std::cout << "time_per_seconds " << time_per_seconds << std::endl;
+    }
+
+  } catch (NGT::Exception &err) {
+    std::cerr << "Error " << err.what() << std::endl;
+    return 1;
+  } catch (...) {
+    std::cerr << "Error" << std::endl;
+    return 1;
+  }
+
+  return 0;
+}
+
 int main(int argc, char **argv)
 {
   
@@ -177,129 +230,30 @@ int main(int argc, char **argv)
   #endif
  
 
-  auto anngIndexPath    = R"(c:/Data/Feature/SIFT1M/NGT/anng1)";
-  auto rnngIndexPath    = R"(c:/Data/Feature/SIFT1M/NGT/rnng1)";
+  auto anngIndexPath    = R"(c:/Data/Feature/SIFT1M/NGT/anng500)";
+  auto rnngIndexPath    = R"(c:/Data/Feature/SIFT1M/NGT/rnng500)";
+  auto onngIndexPath    = R"(c:/Data/Feature/SIFT1M/NGT/anng500-onng50_150_default-redo)";
   auto objectFile       = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_base.fvecs)";
   auto queryFile        = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_query.fvecs)";
   auto groundtruthFile	= R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_groundtruth.ivecs)";
   
-  auto edgeSizeForCreation = 100;
-  auto threadNumber = 8;
+  auto edgeSizeForCreation = 300;
+  auto threadNumber = 1;
 
   // anng index construction
-  int state = createANNGIndex(anngIndexPath, objectFile, edgeSizeForCreation, threadNumber);
-  if(state == 1)
-    return 1;
+  /*int constructState = createANNGIndex(anngIndexPath, objectFile, edgeSizeForCreation, threadNumber);
+  if(constructState == 1)
+    return 1;*/
 
   // anng index refinement
-  int refineState = refineANNGIndex(anngIndexPath, rnngIndexPath, edgeSizeForCreation);
+  /*int refineState = refineANNGIndex(anngIndexPath, rnngIndexPath, edgeSizeForCreation, threadNumber);
   if(refineState == 1)
+    return 1;*/
+
+  int reconstructState = reconstructONNGIndex(anngIndexPath, onngIndexPath);
+  if(reconstructState == 1)
     return 1;
-
-/*
-  try {
-
-    // ngt reconstruct-graph -m S -o outdegree -i indegree anng-index onng-index
-    // https://github.com/yahoojapan/NGT/blob/master/lib/NGT/Command.cpp#L700
-    std::cout << "Convert ANNG to ONNG" << std::endl;
-    {
-      auto time_begin = std::chrono::steady_clock::now();
-*/
-      /*
-      NGT::GraphOptimizer graphOptimizer(false);
-      graphOptimizer.shortcutReduction = true;
-      graphOptimizer.searchParameterOptimization = true;
-      graphOptimizer.prefetchParameterOptimization = true;
-      graphOptimizer.accuracyTableGeneration = true;
-      graphOptimizer.margin = 0.2;
-      graphOptimizer.gtEpsilon = 0.1;
-      graphOptimizer.minNumOfEdges =  0;
-
-
-      size_t nOfQueries = 100;		// # of query objects
-      size_t nOfResults =  20;		// # of resultant objects
-
-      int numOfOutgoingEdges	= args.getl("o", -1);
-      int numOfIncomingEdges	= args.getl("i", -1);
-
-      graphOptimizer.set(numOfOutgoingEdges, numOfIncomingEdges, nOfQueries, nOfResults);
-      graphOptimizer.execute(inIndexPath, outIndexPath);
-      */
-
-/*
-      NGT::GraphReconstructor::reconstructGraph(index, true);
-      auto time_end = std::chrono::steady_clock::now();
-      auto time_per_seconds = std::chrono::duration_cast<std::chrono::seconds>(time_end - time_begin).count();
-      std::cout << "time_per_seconds " << time_per_seconds << ", GraphType" << property.graphType << std::endl;
-    }
     
-    std::cout << "Save RNNG" << std::endl;
-    index.save(rnngIndexPath);
-
-    index.close();
-  } catch (NGT::Exception &err) {
-    std::cerr << "Error " << err.what() << std::endl;
-    return 1;
-  } catch (...) {
-    std::cerr << "Error" << std::endl;
-    return 1;
-  }
-*/
-
-
-/*
-  // nearest neighbor search
-  try {
-    NGT::Index		index(indexPath);
-    NGT::Property	property;
-    index.getProperty(property);
-    
-    std::ifstream		is(queryFile);
-    std::string		line;
-    while (getline(is, line)) {
-      std::vector<uint8_t>	query;
-      {
-        std::stringstream	linestream(line);
-        while (!linestream.eof()) {
-          int value;
-          linestream >> value;
-          query.push_back(value);
-        }
-        query.resize(property.dimension);
-        cout << "Query : ";
-        for (size_t i = 0; i < 5; i++) {
-          std::cout << static_cast<int>(query[i]) << " ";
-        }
-        std::cout << "...";
-      }
-
-      NGT::SearchQuery		sc(query);
-      NGT::ObjectDistances	objects;
-      sc.setResults(&objects);
-      sc.setSize(10);
-      sc.setEpsilon(0.1f);
-
-      index.search(sc);
-      std::cout << endl << "Rank\tID\tDistance" << std::showbase << endl;
-      for (size_t i = 0; i < objects.size(); i++) {
-        std::cout << i + 1 << "\t" << objects[i].id << "\t" << objects[i].distance << "\t: ";
-        NGT::ObjectSpace &objectSpace = index.getObjectSpace();
-        uint8_t *object = static_cast<uint8_t*>(objectSpace.getObject(objects[i].id));
-        for (size_t idx = 0; idx < 5; idx++) {
-          std::cout << static_cast<int>(object[idx]) << " ";
-        }
-        std::cout << "..." << endl;
-      }
-      std::cout << endl;
-    }
-  } catch (NGT::Exception &err) {
-    std::cerr << "Error " << err.what() << endl;
-    return 1;
-  } catch (...) {
-    std::cerr << "Error" << endl;
-    return 1;
-  }
-*/
   return 0;
 }
 

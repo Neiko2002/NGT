@@ -1233,75 +1233,75 @@ namespace NGT {
       DVPTree::getAllLeafNodeIDs(leafNodeIDs);
       size_t objectCount = 0;
       for (size_t i = 0; i < leafNodeIDs.size(); i++) {
-	ObjectDistances objects;
-	DVPTree::getObjectIDsFromLeaf(leafNodeIDs[i], objects);
-	for (size_t j = 0; j < objects.size(); j++) {
-	  exist[objects[j].id] = true;
-	  objectCount++;
-	}
+        ObjectDistances objects;
+        DVPTree::getObjectIDsFromLeaf(leafNodeIDs[i], objects);
+        for (size_t j = 0; j < objects.size(); j++) {
+          exist[objects[j].id] = true;
+          objectCount++;
+        }
       }
       std::multimap<uint32_t, uint32_t> notexist; 
       if (objectCount != repo.size()) {
         for (size_t id = 1; id < exist.size(); id++) {
-	  if (!exist[id]) {
-            DVPTree::SearchContainer tso(*object[id]);
-            tso.mode = DVPTree::SearchContainer::SearchLeaf;
-            tso.radius = 0.0;
-            tso.size = 1;
-      	    try {
-	      DVPTree::search(tso);
-      	    } catch (Exception &err) {
-	      std::stringstream msg;
-	      msg << "GraphAndTreeIndex::getSeeds: Cannot search for tree.:" << err.what();
-	      NGTThrowException(msg);
-      	    }
-	    notexist.insert(std::pair<uint32_t, uint32_t>(tso.nodeID.getID(), static_cast<uint32_t>(id)));
-	    objectCount++;
-	  }
-	}
+          if (!exist[id]) {
+                  DVPTree::SearchContainer tso(*object[id]);
+                  tso.mode = DVPTree::SearchContainer::SearchLeaf;
+                  tso.radius = 0.0;
+                  tso.size = 1;
+                  try {
+              DVPTree::search(tso);
+                  } catch (Exception &err) {
+              std::stringstream msg;
+              msg << "GraphAndTreeIndex::getSeeds: Cannot search for tree.:" << err.what();
+              NGTThrowException(msg);
+                  }
+            notexist.insert(std::pair<uint32_t, uint32_t>(tso.nodeID.getID(), static_cast<uint32_t>(id)));
+            objectCount++;
+          }
+        }
       }
       assert(objectCount == repo.size() - 1);
 
       objectCount = 1;
       std::vector<std::pair<uint32_t, uint32_t> > order;  
       for (size_t i = 0; i < leafNodeIDs.size(); i++) {
-	ObjectDistances objects;
-	DVPTree::getObjectIDsFromLeaf(leafNodeIDs[i], objects);
-	for (size_t j = 0; j < objects.size(); j++) {
-	  order.push_back(std::pair<uint32_t, uint32_t>(objects[j].id, static_cast<uint32_t>(objectCount)));
-	  objectCount++;
-	}
-	auto nei = notexist.equal_range(leafNodeIDs[i].getID());
-	for (auto ii = nei.first; ii != nei.second; ++ii) {
-	  order.push_back(std::pair<uint32_t, uint32_t>((*ii).second, static_cast<uint32_t>(objectCount)));
-	  objectCount++;
-	}
+        ObjectDistances objects;
+        DVPTree::getObjectIDsFromLeaf(leafNodeIDs[i], objects);
+        for (size_t j = 0; j < objects.size(); j++) {
+          order.push_back(std::pair<uint32_t, uint32_t>(objects[j].id, static_cast<uint32_t>(objectCount)));
+          objectCount++;
+        }
+        auto nei = notexist.equal_range(leafNodeIDs[i].getID());
+        for (auto ii = nei.first; ii != nei.second; ++ii) {
+          order.push_back(std::pair<uint32_t, uint32_t>((*ii).second, static_cast<uint32_t>(objectCount)));
+          objectCount++;
+        }
       }
       assert(objectCount == repo.size());
       Object *tmp = space.allocateObject();
       std::unordered_set<uint32_t> uncopiedObjects;
       for (size_t i = 1; i < repo.size(); i++) {
-	uncopiedObjects.insert(i);
+	      uncopiedObjects.insert(i);
       }
       size_t copycount = 0;
       while (!uncopiedObjects.empty()) {
-	size_t startID = *uncopiedObjects.begin();
-	if (startID == order[startID - 1].first) {
-	  uncopiedObjects.erase(startID);
-	  copycount++;
-	  continue;
-	}
-	size_t id = startID;
-	space.copy(*tmp, *object[id]);
-	uncopiedObjects.erase(id);    
-	do {
-	  space.copy(*object[id], *object[order[id - 1].first]);
-	  copycount++;
-	  id = order[id - 1].first;
-	  uncopiedObjects.erase(id);
-	} while (order[id - 1].first != startID);
-	space.copy(*object[id], *tmp);
-	copycount++;
+        size_t startID = *uncopiedObjects.begin();
+        if (startID == order[startID - 1].first) {
+          uncopiedObjects.erase(startID);
+          copycount++;
+          continue;
+        }
+        size_t id = startID;
+        space.copy(*tmp, *object[id]);
+        uncopiedObjects.erase(id);    
+        do {
+          space.copy(*object[id], *object[order[id - 1].first]);
+          copycount++;
+          id = order[id - 1].first;
+          uncopiedObjects.erase(id);
+        } while (order[id - 1].first != startID);
+        space.copy(*object[id], *tmp);
+        copycount++;
       }
       space.deleteObject(tmp);
 
@@ -1310,28 +1310,28 @@ namespace NGT {
       sort(order.begin(), order.end());
       uncopiedObjects.clear();
       for (size_t i = 1; i < repo.size(); i++) {
-	uncopiedObjects.insert(i);
+	      uncopiedObjects.insert(i);
       }
       copycount = 0;
       Object *tmpPtr;
       while (!uncopiedObjects.empty()) {
-	size_t startID = *uncopiedObjects.begin();
-	if (startID == order[startID - 1].second) {
-	  uncopiedObjects.erase(startID);
-	  copycount++;
-	  continue;
-	}
-	size_t id = startID;
-	tmpPtr = object[id];
-	uncopiedObjects.erase(id);    
-	do {
-	  object[id] = object[order[id - 1].second];
-	  copycount++;
-	  id = order[id - 1].second;
-	  uncopiedObjects.erase(id);
-	} while (order[id - 1].second != startID);
-	object[id] = tmpPtr;
-	copycount++;
+        size_t startID = *uncopiedObjects.begin();
+        if (startID == order[startID - 1].second) {
+          uncopiedObjects.erase(startID);
+          copycount++;
+          continue;
+        }
+        size_t id = startID;
+        tmpPtr = object[id];
+        uncopiedObjects.erase(id);    
+        do {
+          object[id] = object[order[id - 1].second];
+          copycount++;
+          id = order[id - 1].second;
+          uncopiedObjects.erase(id);
+        } while (order[id - 1].second != startID);
+        object[id] = tmpPtr;
+        copycount++;
       }
       assert(copycount == repo.size() - 1);
     }
