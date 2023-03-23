@@ -536,29 +536,29 @@ namespace NGT {
       inline GraphNode *getNode(ObjectID fid, size_t &minsize) { return repository.get(fid, minsize); }
       inline GraphNode *getNode(ObjectID fid) { return repository.VECTOR::get(fid); }
       void insertNode(ObjectID id,  ObjectDistances &objects) {
-	switch (property.graphType) {
-	case GraphTypeANNG:
-	  insertANNGNode(id, objects);	
-	  break;
-	case GraphTypeIANNG:
-	  insertIANNGNode(id, objects);	
-	  break;
-	case GraphTypeONNG:
-	  insertONNGNode(id, objects);	
-	  break;
-	case GraphTypeKNNG:
-	  insertKNNGNode(id, objects);
-	  break;
-	case GraphTypeBKNNG:
-	  insertBKNNGNode(id, objects);
-	  break;
-	case GraphTypeNone:
-	  NGTThrowException("NGT::insertNode: GraphType is not specified.");
-	  break;
-	default:
-	  NGTThrowException("NGT::insertNode: GraphType is invalid.");
-	  break;
-	}
+		switch (property.graphType) {
+		case GraphTypeANNG:
+		insertANNGNode(id, objects);	
+		break;
+		case GraphTypeIANNG:
+		insertIANNGNode(id, objects);	
+		break;
+		case GraphTypeONNG:
+		insertONNGNode(id, objects);	
+		break;
+		case GraphTypeKNNG:
+		insertKNNGNode(id, objects);
+		break;
+		case GraphTypeBKNNG:
+		insertBKNNGNode(id, objects);
+		break;
+		case GraphTypeNone:
+		NGTThrowException("NGT::insertNode: GraphType is not specified.");
+		break;
+		default:
+		NGTThrowException("NGT::insertNode: GraphType is invalid.");
+		break;
+		}
       }
 
       void insertBKNNGNode(ObjectID id, ObjectDistances &results) {
@@ -635,23 +635,23 @@ namespace NGT {
       }
 
       void insertONNGNode(ObjectID id, ObjectDistances &results) {
-	if (property.truncationThreshold != 0) {
-	  std::stringstream msg;
-	  msg << "NGT::insertONNGNode: truncation should be disabled!" << std::endl;
-	  NGTThrowException(msg);
-	}
-	int count = 0;
-	for (ObjectDistances::iterator ri = results.begin(); ri != results.end(); ri++, count++) {
-	  assert(id != (*ri).id);
-	  if (count >= property.incomingEdge) {
-	    break;
-	  }
-	  addEdge((*ri).id, id, (*ri).distance); 
-	}
-	if (static_cast<int>(results.size()) > property.outgoingEdge) {
-	  results.resize(property.outgoingEdge);
-	}
-	repository.insert(id, results);
+		if (property.truncationThreshold != 0) {
+			std::stringstream msg;
+			msg << "NGT::insertONNGNode: truncation should be disabled!" << std::endl;
+			NGTThrowException(msg);
+		}
+		int count = 0;
+		for (ObjectDistances::iterator ri = results.begin(); ri != results.end(); ri++, count++) {
+			assert(id != (*ri).id);
+			if (count >= property.incomingEdge) {
+				break;
+			}
+			addEdge((*ri).id, id, (*ri).distance); 
+		}
+		if (static_cast<int>(results.size()) > property.outgoingEdge) {
+			results.resize(property.outgoingEdge);
+		}
+		repository.insert(id, results);
       }
 
       void removeEdgesReliably(ObjectID id);
@@ -692,6 +692,7 @@ namespace NGT {
       }
 
       void search(NGT::SearchContainer &sc, ObjectDistances &seeds);
+	  void explore(NGT::SearchContainer &sc, ObjectDistances &seeds, const uint32_t max_distance_count);
 
 #ifdef NGT_GRAPH_READ_ONLY_GRAPH
       template <typename COMPARATOR, typename CHECK_LIST> void searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDistances &seeds);

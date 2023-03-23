@@ -86,76 +86,24 @@ int main(int argc, char **argv)
     std::cout << "use NGT_NO_AVX  ..." << std::endl;
   #endif
  
-  auto readOnly         = false;
-  auto treeDisabled     = false; // true if ONNG was build with PANNG 
 
-
-  // SIFT
-  // auto objectFile       = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_base.fvecs)";
-  // auto queryFile        = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_query.fvecs)";
-  // auto groundtruthFile	= R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_groundtruth.ivecs)";
-  // auto indexPath        = R"(e:/Data/Feature/SIFT1M/NGT/in30 out110 noTable (anng200 eps1.1))";
-  // std::vector<float> exploration_coefficients = { -0.03f, -0.02f, -0.01f, -0.005f, -0.001f, 0.005f, 0.01f, 0.03f, 0.05f};
-
-  // GloVe
-  auto objectFile       = R"(e:/Data/Feature/GloVe/glove-100/glove-100_base.fvecs)";
-  auto queryFile        = R"(e:/Data/Feature/GloVe/glove-100/glove-100_query.fvecs)";
-  auto groundtruthFile  = R"(e:/Data/Feature/GloVe/glove-100/glove-100_groundtruth.ivecs)";
-  auto indexPath        = R"(e:/Data/Feature/GloVe/NGT/onng in15 out155 noTable (anng K200 eps1.1))";
-  std::vector<float> exploration_coefficients = { 0.04f, 0.05f, 0.06f, 0.07f, 0.08f, 0.09f, 0.1f }; 
-
-  // convert to txt files
-  // auto objectFile_text  = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_base.txt)";
-  // size_t count, dim;
-  // auto data = fvecs_read(objectFile, dim, count);
-
-  // auto out = std::ofstream(objectFile_text, std::ios::out);
-  // for (size_t i = 0; i < count; i++) {
-  //   int offset = i * dim; 
-
-  //   for (size_t d = 0; d < dim; d++) {
-  //     out << (int32_t) data[offset + d];
-
-  //     if(d+1 < dim)
-  //       out << " ";
-  //   }
-  //   out << std::endl;   
-  // }
-  // out.close();
-
-
-
-  unsigned K = 100;
+  auto indexPath        = R"(c:/Data/Feature/SIFT1M/NGT/anng500-onng50_150_default)";
+  auto objectFile       = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_base.fvecs)";
+  auto queryFile       = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_explore_query.fvecs)";
+  auto groundtruthFile = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_explore_ground_truth.ivecs)";
+  auto entryNodeFile  = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_explore_entry_node.ivecs)";
+  uint32_t maxK = 1000;
   unsigned seed = 161803398;
   srand(seed);
 
 
-  std::cout << "Load index" << std::endl;
-  auto index = NGT::Index(indexPath, readOnly);
+  auto index = NGT::Index(indexPath);
   NGT::Property	property;
   index.getProperty(property);
-  std::cout << "Actual memory usage: " << getCurrentRSS() / 1000000 << " Mb, Max memory usage: " << getPeakRSS() / 1000000 << " Mb after loading index" << std::endl;
-
-
-  // auto new_vector = std::vector<float>(128);
-  // std::fill(new_vector.begin(),new_vector.end(), 1);
-  // const float* new_data = new_vector.data();
-  // index.append(new_data, 128);
-  // index.remove(1, true);
 
   std::cout << "dimension: " << property.dimension << std::endl;
   std::cout << "edgeSizeForCreation: " << property.edgeSizeForCreation << std::endl;
-  std::cout << "edgeSizeLimitForCreation: " << property.edgeSizeLimitForCreation << std::endl;
-  std::cout << "edgeSizeForSearch: " << property.edgeSizeForSearch << std::endl;
-  std::cout << "insertionRadiusCoefficient: " << property.insertionRadiusCoefficient << std::endl;
   std::cout << "threadPoolSize: " << property.threadPoolSize << std::endl;
-  std::cout << "outgoingEdge: " << property.outgoingEdge << std::endl;
-  std::cout << "incomingEdge: " << property.incomingEdge << std::endl;
-  std::cout << "batchSizeForCreation: " << property.batchSizeForCreation << std::endl;
-  std::cout << "threadPoolSize: " << property.threadPoolSize << std::endl;
-  std::cout << "pathAdjustmentInterval: " << property.pathAdjustmentInterval << std::endl;
-  std::cout << "dynamicEdgeSizeBase: " << property.dynamicEdgeSizeBase << std::endl;
-  std::cout << "buildTimeLimit: " << property.buildTimeLimit << std::endl;
   std::cout << "objectType: " << property.objectType << std::endl;                    // Uint8		= 1, Float		= 2
   std::cout << "distanceType: " << property.distanceType << std::endl;                // DistanceTypeL2			= 1,
   std::cout << "databaseType: " << property.databaseType << std::endl;                // Memory			= 1,
@@ -165,7 +113,6 @@ int main(int argc, char **argv)
 
 
   // query data
-  std::cout << "Load query data" << std::endl;
   size_t query_num, query_dim;
   auto query_data = fvecs_read(queryFile, query_dim, query_num);
 
@@ -173,43 +120,42 @@ int main(int argc, char **argv)
   size_t groundtruth_num, groundtruth_dim;
   auto groundtruth_f = fvecs_read(groundtruthFile, groundtruth_dim, groundtruth_num);
   const auto ground_truth = (uint32_t*)groundtruth_f.get(); // not very clean, works as long as sizeof(int) == sizeof(float)
-  const auto answers = get_ground_truth(ground_truth, groundtruth_num, groundtruth_dim, K);
-  std::cout << "Actual memory usage: " << getCurrentRSS() / 1000000 << " Mb, Max memory usage: " << getPeakRSS() / 1000000 << " Mb after loading query data" << std::endl;
 
+  // entry node ids
+  size_t entrynode_num, entrynode_dim;
+  auto entrynode_f = fvecs_read(entryNodeFile, entrynode_dim, entrynode_num);
+  const auto entry_node = (uint32_t*)entrynode_f.get(); // not very clean, works as long as sizeof(int) == sizeof(float)
 
-  std::cout << "Evaluate graph " << std::endl;
-  for (float exploration_coefficient : exploration_coefficients) {
+  auto steps = 30;
+  for (size_t i = 3; i <= steps; i++) {
+    const auto K = maxK;
+    const auto max_distance_count = uint32_t(K + (K/1 * i));
 
-
+    const auto answers = get_ground_truth(ground_truth, groundtruth_num, groundtruth_dim, K);
     auto time_begin = std::chrono::steady_clock::now();
 
     size_t correct = 0;
     for (unsigned i = 0; i < query_num; i++) {
+      auto entry_node_index = (uint32_t)  (entry_node[i * entrynode_dim] + 1);
       auto query = std::vector(query_data.get() + i * query_dim, query_data.get() + i * query_dim + query_dim);
       NGT::SearchQuery		sc(query);
       NGT::ObjectDistances	objects;
       sc.setResults(&objects);
       sc.setSize(K);
-      sc.setEpsilon(exploration_coefficient);
-      //sc.setExpectedAccuracy(0.7f); // needs accuracy table in the graph files
+      sc.setEpsilon(0.00f); // why does -0.005f improve the quality?
 
-      if(treeDisabled)
-        index.searchUsingOnlyGraph(sc);
-      else
-        index.search(sc);
+      index.explore(sc, entry_node_index, max_distance_count);
 
       // compare answer with ann
       auto answer = answers[i];
-      for (size_t r = 0; r < K; r++)
+      for (size_t r = 0; r < K; r++) 
         if (answer.find(objects[r].id - 1) != answer.end()) correct++; // all ids in the index to high by 1 value
     }
 
     auto time_end = std::chrono::steady_clock::now();
     auto time_us_per_query = (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count()) / query_num;
     auto recall = 1.0f * correct / (query_num * K);
-    std::cout << "exploration_coefficient " << exploration_coefficient << ", recall " << recall << ", time_us_per_query " << time_us_per_query << std::endl;
-    if (recall > 1.0)
-      break;
+    std::cout << "k and p " << K << ", max_distance_count " << max_distance_count << ", recall " << recall << " time_us_per_query " << time_us_per_query << std::endl;
   }
 
   return 0;

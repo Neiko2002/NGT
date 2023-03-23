@@ -417,10 +417,10 @@ namespace NGT {
     virtual void append(const float *data, size_t dataSize) { 
       redirector.begin();
       try {
-	getIndex().append(data, dataSize); 
+        getIndex().append(data, dataSize); 
       } catch(Exception &err) {
-	redirector.end();
-	throw err;
+        redirector.end();
+        throw err;
       }
       redirector.end();
     }
@@ -461,6 +461,10 @@ namespace NGT {
     virtual void search(NGT::SearchContainer &sc) { getIndex().search(sc); }
     virtual void search(NGT::SearchQuery &sc) { getIndex().search(sc); }
     virtual void search(NGT::SearchContainer &sc, ObjectDistances &seeds) { getIndex().search(sc, seeds); }
+
+    virtual void explore(NGT::SearchQuery &sc, const uint32_t entry_node_index, const uint32_t max_distance_count) { getIndex().explore(sc, entry_node_index, max_distance_count); }
+    virtual void explore(NGT::SearchContainer &sc, ObjectDistances &seeds, const uint32_t max_distance_count) { getIndex().explore(sc, seeds, max_distance_count); }
+
     virtual void remove(ObjectID id, bool force = false) { getIndex().remove(id, force); }
     virtual void exportIndex(const std::string &file) { getIndex().exportIndex(file); }
     virtual void importIndex(const std::string &file) { getIndex().importIndex(file); }
@@ -486,8 +490,8 @@ namespace NGT {
     std::vector<float> makeSparseObject(std::vector<uint32_t> &object);
     Index &getIndex() {
       if (index == 0) {
-	assert(index != 0);
-	NGTThrowException("NGT::Index::getIndex: Index is unavailable.");	
+        assert(index != 0);
+        NGTThrowException("NGT::Index::getIndex: Index is unavailable.");	
       }
       return *index;
     }
@@ -633,32 +637,34 @@ namespace NGT {
 
     virtual void append(const std::string &ifile, size_t dataSize = 0) {
       if (ifile.empty()) {
-	return;
+	      return;
       }
+
       std::istream *is;
       std::ifstream *ifs = 0;
       if (ifile == "-") {
-	is = &std::cin;
+	      is = &std::cin;
       } else {
-	ifs = new std::ifstream;
-	ifs->std::ifstream::open(ifile);
-	if (!(*ifs)) {
-	  std::stringstream msg;
-	  msg << "Index::load: Cannot open the specified file. " << ifile;
-	  NGTThrowException(msg);
-	}
-	is = ifs;
+        ifs = new std::ifstream;
+        ifs->std::ifstream::open(ifile);
+        if (!(*ifs)) {
+          std::stringstream msg;
+          msg << "Index::load: Cannot open the specified file. " << ifile;
+          NGTThrowException(msg);
+        }
+        is = ifs;
       }
+      
       try {
-	objectSpace->appendText(*is, dataSize);
+	      objectSpace->appendText(*is, dataSize);
       } catch(Exception &err) {
-	if (ifile != "-") {
-	  delete ifs;
-	}
-	throw(err);
+        if (ifile != "-") {
+          delete ifs;
+        }
+        throw(err);
       }
       if (ifile != "-") {
-	delete ifs;
+	      delete ifs;
       }
     }
 
@@ -765,13 +771,13 @@ namespace NGT {
       Object *query = Index::allocateObject(searchQuery.getQuery(), searchQuery.getQueryType());
       try {
         NGT::SearchContainer sc(searchQuery, *query);
-	sc.distanceComputationCount = 0;
-	sc.visitCount = 0;
-	ObjectDistances seeds;
-	search(sc, seeds);
-      } catch(Exception &err) {
-	deleteObject(query);
-	throw err;
+        sc.distanceComputationCount = 0;
+        sc.visitCount = 0;
+        ObjectDistances seeds;
+        search(sc, seeds);
+            } catch(Exception &err) {
+        deleteObject(query);
+        throw err;
       }
       deleteObject(query);
     }
@@ -824,9 +830,9 @@ namespace NGT {
       sc.radius = FLT_MAX;
       sc.explorationCoefficient = NeighborhoodGraph::property.insertionRadiusCoefficient;
       try {
-	GraphIndex::search(sc);
-      } catch(Exception &err) {
-	throw err;
+        GraphIndex::search(sc);
+            } catch(Exception &err) {
+        throw err;
       }
       if (static_cast<int>(result.size()) < NeighborhoodGraph::property.edgeSizeForCreation && 
 	  result.size() < repository.size()) {
@@ -1119,23 +1125,23 @@ namespace NGT {
     
     template <class REPOSITORY> void getSeedsFromGraph(REPOSITORY &repo, ObjectDistances &seeds) {
       if (repo.size() != 0) {
-	size_t seedSize = repo.size() - 1 < (size_t)NeighborhoodGraph::property.seedSize ? 
-	  repo.size() - 1 : (size_t)NeighborhoodGraph::property.seedSize;
-	if (NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeRandomNodes ||
-	    NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeNone) {
-	  getRandomSeeds(repo, seeds, seedSize);
-	} else if (NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeFixedNodes) {
-	  // To check speed using fixed seeds.
-	  for (size_t i = 1; i <= seedSize; i++) {
-	    ObjectDistance obj(i, 0.0);
-	    seeds.push_back(obj);
-	  }
-	} else if (NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeFirstNode) {
-	  ObjectDistance obj(1, 0.0);
-	  seeds.push_back(obj);
-	} else {
-	  getRandomSeeds(repo, seeds, seedSize);
-	}
+        size_t seedSize = repo.size() - 1 < (size_t)NeighborhoodGraph::property.seedSize ? 
+          repo.size() - 1 : (size_t)NeighborhoodGraph::property.seedSize;
+        if (NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeRandomNodes ||
+            NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeNone) {
+          getRandomSeeds(repo, seeds, seedSize);
+        } else if (NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeFixedNodes) {
+          // To check speed using fixed seeds.
+          for (size_t i = 1; i <= seedSize; i++) {
+            ObjectDistance obj(i, 0.0);
+            seeds.push_back(obj);
+          }
+        } else if (NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeFirstNode) {
+          ObjectDistance obj(1, 0.0);
+          seeds.push_back(obj);
+        } else {
+          getRandomSeeds(repo, seeds, seedSize);
+        }
       }
     }
 
@@ -1172,6 +1178,50 @@ namespace NGT {
 #endif
        } else {
          NeighborhoodGraph::search(so, seeds);
+       }
+       sc.workingResult = std::move(so.workingResult);
+       sc.distanceComputationCount = so.distanceComputationCount;
+       sc.visitCount = so.visitCount;
+     } catch (Exception &err) {
+       std::cerr << err.what() << std::endl;
+       Exception e(err);
+       throw e;
+     }
+   }
+
+    virtual void explore(NGT::SearchContainer &sc, ObjectDistances &seeds, const uint32_t max_distance_count) {
+     if (sc.size == 0) {
+       while (!sc.workingResult.empty()) sc.workingResult.pop();
+       return;
+     }
+     if (seeds.size() == 0) {
+#if defined(NGT_SHARED_MEMORY_ALLOCATOR) || !defined(NGT_GRAPH_READ_ONLY_GRAPH)
+       getSeedsFromGraph(repository, seeds);
+#else
+       if (readOnly) {
+         getSeedsFromGraph(searchRepository, seeds);
+       } else {
+         getSeedsFromGraph(repository, seeds);
+       }
+#endif
+     }
+     if (sc.expectedAccuracy > 0.0) {
+       sc.setEpsilon(getEpsilonFromExpectedAccuracy(sc.expectedAccuracy));
+     }
+
+     NGT::SearchContainer so(sc);
+     try {
+       if (readOnly) {
+#if defined(NGT_SHARED_MEMORY_ALLOCATOR) || !defined(NGT_GRAPH_READ_ONLY_GRAPH)
+         NeighborhoodGraph::explore(so, seeds, max_distance_count);
+#else
+         //(*searchUnupdatableGraph)(*this, so, seeds);  NOT SUPPORTED
+         std::stringstream msg;
+         msg << "GraphIndex::explore: readOnly explore not supported yet";
+         NGTThrowException(msg);
+#endif
+       } else {
+         NeighborhoodGraph::explore(so, seeds, max_distance_count);
        }
        sc.workingResult = std::move(so.workingResult);
        sc.distanceComputationCount = so.distanceComputationCount;
@@ -1391,39 +1441,39 @@ namespace NGT {
     void remove(const ObjectID id, bool force = false) {
       Object *obj = 0;
       try {
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	obj = GraphIndex::objectSpace->allocateObject(*GraphIndex::objectSpace->getRepository().get(id));
-#else
-	obj = GraphIndex::objectSpace->getRepository().get(id);
-#endif
+        #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+          obj = GraphIndex::objectSpace->allocateObject(*GraphIndex::objectSpace->getRepository().get(id));
+        #else
+          obj = GraphIndex::objectSpace->getRepository().get(id);
+        #endif
       } catch (Exception &err) {
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	GraphIndex::objectSpace->deleteObject(obj);
-#endif
-	if (force) {
-	  try {
-	    DVPTree::removeNaively(id);
+        #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+          GraphIndex::objectSpace->deleteObject(obj);
+        #endif
+        if (force) {
+          try {
+            DVPTree::removeNaively(id);
+                } catch(...) {}
+          try {
+            GraphIndex::remove(id, force);
           } catch(...) {}
-	  try {
-	    GraphIndex::remove(id, force);
-          } catch(...) {}
-	  std::stringstream msg;
-	  msg << err.what() << " Even though the object could not be found, the object could be removed from the tree and graph if it existed in them.";
-	  NGTThrowException(msg);
+          std::stringstream msg;
+          msg << err.what() << " Even though the object could not be found, the object could be removed from the tree and graph if it existed in them.";
+          NGTThrowException(msg);
         }
-	throw err;
+        throw err;
       }
       if (NeighborhoodGraph::repository.isEmpty(id)) {
-#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-	GraphIndex::objectSpace->deleteObject(obj);
-#endif
-	if (force) {
-	  try {
-	    DVPTree::removeNaively(id);
-	  } catch(...) {}
-	}
-	GraphIndex::remove(id, force);
-	return;
+        #ifdef NGT_SHARED_MEMORY_ALLOCATOR
+          GraphIndex::objectSpace->deleteObject(obj);
+        #endif
+        if (force) {
+          try {
+            DVPTree::removeNaively(id);
+          } catch(...) {}
+        }
+        GraphIndex::remove(id, force);
+        return;
       }
       NGT::SearchContainer so(*obj);
       ObjectDistances results;
@@ -1439,22 +1489,22 @@ namespace NGT {
       GraphIndex::objectSpace->deleteObject(obj);
 #endif
       if (results.size() == 0) {
-	NGTThrowException("Not found the specified id");
+	      NGTThrowException("Not found the specified id");
       }
       if (results.size() == 1) {
-	try {
-	  DVPTree::remove(id);
-	} catch(Exception &err) {
-	  std::stringstream msg;
-	  msg << "remove:: cannot remove from tree. id=" << id << " " << err.what();
-	  NGTThrowException(msg);	
-	}
+        try {
+          DVPTree::remove(id);
+        } catch(Exception &err) {
+          std::stringstream msg;
+          msg << "remove:: cannot remove from tree. id=" << id << " " << err.what();
+          NGTThrowException(msg);	
+        }
       } else {
-	ObjectID replaceID = id == results[0].id ? results[1].id : results[0].id;
-	try {
-	  DVPTree::replace(id, replaceID);
-	} catch(Exception &err) {
-	}
+        ObjectID replaceID = id == results[0].id ? results[1].id : results[0].id;
+        try {
+          DVPTree::replace(id, replaceID);
+        } catch(Exception &err) {
+        }
       }
       GraphIndex::remove(id, force);
     }
@@ -1532,41 +1582,43 @@ namespace NGT {
       tso.size = 1;
       tso.distanceComputationCount = 0;
       tso.visitCount = 0;
+
       try {
-	DVPTree::search(tso);
+	      DVPTree::search(tso);
       } catch (Exception &err) {
-	std::stringstream msg;
-	msg << "GraphAndTreeIndex::getSeeds: Cannot search for tree.:" << err.what();
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "GraphAndTreeIndex::getSeeds: Cannot search for tree.:" << err.what();
+        NGTThrowException(msg);
       }
 
       try {
-	DVPTree::getObjectIDsFromLeaf(tso.nodeID, seeds);
+	      DVPTree::getObjectIDsFromLeaf(tso.nodeID, seeds);
       } catch (Exception &err) {
-	std::stringstream msg;
-	msg << "GraphAndTreeIndex::getSeeds: Cannot get a leaf.:" << err.what();
-	NGTThrowException(msg);
+        std::stringstream msg;
+        msg << "GraphAndTreeIndex::getSeeds: Cannot get a leaf.:" << err.what();
+        NGTThrowException(msg);
       }
+
       sc.distanceComputationCount += tso.distanceComputationCount;
       sc.visitCount += tso.visitCount;
-      if (sc.useAllNodesInLeaf || NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeAllLeafNodes) {
-	return;
-      }
+      if (sc.useAllNodesInLeaf || NeighborhoodGraph::property.seedType == NeighborhoodGraph::SeedTypeAllLeafNodes) 
+	      return;
+      
       // if seedSize is zero, the result size of the query is used as seedSize.
       size_t seedSize = NeighborhoodGraph::property.seedSize == 0 ? sc.size : NeighborhoodGraph::property.seedSize;
       seedSize = seedSize > sc.size ? sc.size : seedSize;
       if (seeds.size() > seedSize) {
-	srand(tso.nodeID.getID());
-	// to accelerate thinning data.
-	for (size_t i = seeds.size(); i > seedSize; i--) {
-	  double random = ((double)rand() + 1.0) / ((double)RAND_MAX + 2.0);
-	  size_t idx = floor(i * random);
-	  seeds[idx] = seeds[i - 1];
-	}
-	seeds.resize(seedSize);
+        srand(tso.nodeID.getID());
+        // to accelerate thinning data.
+        for (size_t i = seeds.size(); i > seedSize; i--) {
+          double random = ((double)rand() + 1.0) / ((double)RAND_MAX + 2.0);
+          size_t idx = floor(i * random);
+          seeds[idx] = seeds[i - 1];
+        }
+        seeds.resize(seedSize);
       } else if (seeds.size() < seedSize) {
-	// A lack of the seeds is compansated by random seeds.
-	//getRandomSeeds(seeds, seedSize);
+        // A lack of the seeds is compansated by random seeds.
+        //getRandomSeeds(seeds, seedSize);
       }
     }
 
@@ -1577,7 +1629,6 @@ namespace NGT {
       ObjectDistances	seeds;
       getSeedsFromTree(sc, seeds);
       GraphIndex::search(sc, seeds);
-
     }
 
     void search(NGT::SearchQuery &searchQuery) {
@@ -1589,6 +1640,28 @@ namespace NGT {
         ObjectDistances	seeds;
         getSeedsFromTree(sc, seeds);
         GraphIndex::search(sc, seeds);
+      } catch(Exception &err) {
+        deleteObject(query);
+        throw err;
+      }
+      deleteObject(query);
+    }
+
+    void explore(NGT::SearchQuery &searchQuery, const uint32_t initial_node_id, const uint32_t max_distance_count) {
+      Object *query = Index::allocateObject(searchQuery.getQuery(), searchQuery.getQueryType());
+      try {
+        NGT::SearchContainer sc(searchQuery, *query);
+        sc.distanceComputationCount = 0;
+        sc.visitCount = 0;
+
+        // initial ssed
+        ObjectDistances	seeds;
+        ObjectDistance	initial_node;
+        initial_node.id = initial_node_id;
+        initial_node.distance = 0;
+        seeds.push_back(initial_node);
+
+        GraphIndex::explore(sc, seeds, max_distance_count);
       } catch(Exception &err) {
         deleteObject(query);
         throw err;

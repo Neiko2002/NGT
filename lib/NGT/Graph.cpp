@@ -635,6 +635,155 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
     }
   }
 
+
+  void NeighborhoodGraph::explore(NGT::SearchContainer &sc, ObjectDistances &seeds, const uint32_t max_distance_computation_count) {
+    if (sc.explorationCoefficient == 0.0) {
+      sc.explorationCoefficient = NGT_EXPLORATION_COEFFICIENT;
+    }
+
+    // setup edgeSize
+    size_t edgeSize = getEdgeSize(sc);
+
+    UncheckedSet unchecked;
+#if defined(NGT_GRAPH_CHECK_BITSET)
+    DistanceCheckedSet distanceChecked(0);
+#elif defined(NGT_GRAPH_CHECK_BOOLEANSET)
+  DistanceCheckedSet distanceChecked(repository.size());
+#elif defined(NGT_GRAPH_CHECK_HASH_BASED_BOOLEAN_SET)
+  DistanceCheckedSet distanceChecked(repository.size());
+#elif defined(NGT_GRAPH_CHECK_VECTOR)
+  DistanceCheckedSet distanceChecked(repository.size());
+#else
+  DistanceCheckedSet distanceChecked;
+#endif
+
+    uint32_t distance_computation_count = 0;
+
+    ResultSet results;
+    setupDistances(sc, seeds);
+    setupSeeds(sc, seeds, results, unchecked, distanceChecked);
+    Distance explorationRadius = sc.explorationCoefficient * sc.radius;
+    NGT::ObjectSpace::Comparator &comparator = objectSpace->getComparator();
+    ObjectRepository &objectRepository = getObjectRepository();
+    const size_t prefetchSize = objectSpace->getPrefetchSize();
+    ObjectDistance result;
+#ifdef NGT_GRAPH_BETTER_FIRST_RESTORE
+    NodeWithPosition target;
+#else
+  ObjectDistance target;
+#endif
+    const size_t prefetchOffset = objectSpace->getPrefetchOffset();
+    ObjectDistance *neighborptr;
+    ObjectDistance *neighborendptr;
+    while (!unchecked.empty() && distance_computation_count < max_distance_computation_count) {
+      target = unchecked.top();
+      unchecked.pop();
+      if (target.distance > explorationRadius) {
+        break;
+      }
+      GraphNode *neighbors = 0;
+      try {
+        neighbors = getNode(target.id);
+      } catch (Exception &err) {
+        cerr << "Graph::search: Warning. " << err.what() << "  ID=" << target.id
+             << endl;
+        continue;
+      }
+      if (neighbors->size() == 0) {
+        continue;
+      }
+#ifdef NGT_GRAPH_BETTER_FIRST_RESTORE
+      uint32_t position = target.position;
+#endif
+#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+#ifdef NGT_GRAPH_BETTER_FIRST_RESTORE
+      neighborptr = &(*neighbors).at(position, repository.allocator);
+#else
+      neighborptr = &(*neighbors).at(0, repository.allocator);
+#endif
+#else
+#ifdef NGT_GRAPH_BETTER_FIRST_RESTORE
+    neighborptr = &(*neighbors)[position];
+#else
+    neighborptr = &(*neighbors)[0];
+#endif
+#endif
+      neighborendptr = neighborptr;
+      size_t neighborSize = neighbors->size() < edgeSize ? neighbors->size() : edgeSize;
+      neighborendptr += neighborSize;
+#ifdef NGT_GRAPH_BETTER_FIRST_RESTORE
+      neighborendptr -= position;
+#endif
+      size_t poft = prefetchOffset < neighborSize ? prefetchOffset : neighborSize;
+      for (size_t i = 0; i < poft; i++) {
+        if (!distanceChecked[(*(neighborptr + i)).id]) {
+          const char *ptr = reinterpret_cast<const char *>(objectRepository.get((*(neighborptr + i)).id));
+          MemoryCache::prefetch(ptr, prefetchSize);
+        }
+      }
+#ifdef NGT_GRAPH_BETTER_FIRST_RESTORE
+      for (; neighborptr < neighborendptr; ++neighborptr, position++) {
+#else
+    for (; neighborptr < neighborendptr; ++neighborptr) {
+#endif
+        if ((neighborptr + prefetchOffset < neighborendptr) && !distanceChecked[(*(neighborptr + prefetchOffset)).id]) {
+          const char *ptr = reinterpret_cast<const char *>(objectRepository.get((*(neighborptr + prefetchOffset)).id));
+          MemoryCache::prefetch(ptr, prefetchSize);
+        }
+        sc.visitCount++;
+        ObjectDistance &neighbor = *neighborptr;
+        if (distanceChecked[neighbor.id]) {
+          continue;
+        }
+        distanceChecked.insert(neighbor.id);
+
+#ifdef NGT_EXPLORATION_COEFFICIENT_OPTIMIZATION
+        sc.explorationCoefficient =
+            exp(-(double)distanceChecked.size() / 20000.0) / 10.0 + 1.0;
+#endif
+
+        
+        Distance distance = comparator(sc.object, *objectRepository.get(neighbor.id));
+        sc.distanceComputationCount++;
+        if (distance <= explorationRadius) {
+          result.set(neighbor.id, distance);
+          unchecked.push(result);
+          if (distance <= sc.radius) {
+            results.push(result);
+            if (results.size() >= sc.size) {
+              if (results.top().distance >= distance) {
+                if (results.size() > sc.size) {
+                  results.pop();
+                }
+                sc.radius = results.top().distance;
+                explorationRadius = sc.explorationCoefficient * sc.radius;
+              }
+            }
+          }
+#ifdef NGT_GRAPH_BETTER_FIRST_RESTORE
+          if ((distance < target.distance) && (distance <= explorationRadius) && ((neighborptr + 2) < neighborendptr)) {
+            target.position = position + 1;
+            unchecked.push(target);
+            break;
+          }
+#endif
+        }
+
+        distance_computation_count++;
+        if(distance_computation_count >= max_distance_computation_count)
+          break;
+      }
+    }
+
+    if (sc.resultIsAvailable()) {
+      ObjectDistances &qresults = sc.getResult();
+      qresults.clear();
+      qresults.moveFrom(results);
+    } else {
+      sc.workingResult = std::move(results);
+    }
+  }
+
   void
   NeighborhoodGraph::removeEdgesReliably(ObjectID id) {
     GraphNode *nodetmp = 0;
@@ -646,21 +795,23 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
       msg << ":" << err.what();
       NGTThrowException(msg.str());
     }
+
     if (nodetmp == 0) {
       stringstream msg;
       msg << "removeEdgesReliably : cannot find a node. ID=" << id;
       NGTThrowException(msg.str());
     }
+
     GraphNode &node = *nodetmp;
     if (node.size() == 0) {
       cerr << "removeEdgesReliably : Warning! : No edges. ID=" << id << endl;
       try {
-	removeNode(id);
+	      removeNode(id);
       } catch (Exception &err) {
-	stringstream msg;
-	msg << "removeEdgesReliably : Internal error! : cannot remove a node without edges. ID=" << id;
-	msg << ":" << err.what();
-	NGTThrowException(msg.str());
+        stringstream msg;
+        msg << "removeEdgesReliably : Internal error! : cannot remove a node without edges. ID=" << id;
+        msg << ":" << err.what();
+        NGTThrowException(msg.str());
       }
       return;
     }
@@ -668,187 +819,195 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
     vector<PersistentObject*> objtbl;
     vector<GraphNode*> nodetbl;
     try {
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-      for (GraphNode::iterator i = node.begin(repository.allocator); i != node.end(repository.allocator);) {
-#else
-      for (GraphNode::iterator i = node.begin(); i != node.end();) {
-#endif
-	if (id == (*i).id) {
-	  cerr << "Graph::removeEdgesReliably: Inner error. Destination nodes include a source node. ID="
-	       << id << " continue..." << endl;
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  i = node.erase(i, repository.allocator);
-#else
-	  i = node.erase(i);
-#endif
-	  continue;
-	}
-	objtbl.push_back(getObjectRepository().get((*i).id));
-	GraphNode *n = 0;	
-	try {
-	  n = getNode((*i).id);
-	} catch (Exception &err) {
-	  cerr << "Graph::removeEdgesReliably: Cannot find edges of a child. ID="
-	       << (*i).id << " continue..." << endl;
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  i = node.erase(i, repository.allocator);
-#else
-	  i = node.erase(i);
-#endif
-	  continue;
-	}
-	nodetbl.push_back(n);
+    #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+      for (GraphNode::iterator i = node.begin(repository.allocator); i != node.end(repository.allocator);) 
+    #else
+      for (GraphNode::iterator i = node.begin(); i != node.end();) 
+    #endif
+      {
+        if (id == (*i).id) {
+          cerr << "Graph::removeEdgesReliably: Inner error. Destination nodes include a source node. ID="
+              << id << " continue..." << endl;
+          #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+              i = node.erase(i, repository.allocator);
+          #else
+              i = node.erase(i);
+          #endif
+              continue;
+        }
+        objtbl.push_back(getObjectRepository().get((*i).id));
+        
+        GraphNode *n = 0;	
+        try {
+          n = getNode((*i).id);
+        } catch (Exception &err) {
+          cerr << "Graph::removeEdgesReliably: Cannot find edges of a child. ID="
+              << (*i).id << " continue..." << endl;
+          #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+              i = node.erase(i, repository.allocator);
+          #else
+              i = node.erase(i);
+          #endif
+          continue;
+        }
+        nodetbl.push_back(n);
 
-	ObjectDistance edge;
-	edge.id = id;
-	edge.distance = (*i).distance;
-	{
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  GraphNode::iterator ei = std::lower_bound(n->begin(repository.allocator), n->end(repository.allocator), edge);
-	  if (ei != n->end(repository.allocator) && (*ei).id == id) {
-	    n->erase(ei, repository.allocator);
-#else
-	  GraphNode::iterator ei = std::lower_bound(n->begin(), n->end(), edge);
-	  if (ei != n->end() && (*ei).id == id) {
-	    n->erase(ei);
-#endif
-	  } else {
-	    stringstream msg;
-	    msg << "removeEdgesReliably : internal error : cannot find an edge. ID="
-		<< id << " d=" << edge.distance << " in " << (*i).id << endl;
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	    for (GraphNode::iterator ni = n->begin(repository.allocator); ni != n->end(repository.allocator); ni++) {
-#else
-	    for (GraphNode::iterator ni = n->begin(); ni != n->end(); ni++) {
-#endif
-	      msg << "check. " << (*ni).id << endl;
-	    }
-#ifdef NGT_FORCED_REMOVE
-	    msg << " anyway continue...";
-	    cerr << msg.str() << endl;
-#else
-	    NGTThrowException(msg.str());
-#endif
-	  }
-	}
-	i++;
+        ObjectDistance edge;
+        edge.id = id;
+        edge.distance = (*i).distance;
+	      {
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)  
+          GraphNode::iterator ei = std::lower_bound(n->begin(repository.allocator), n->end(repository.allocator), edge);
+          if (ei != n->end(repository.allocator) && (*ei).id == id) {
+            n->erase(ei, repository.allocator);
+        #else
+          GraphNode::iterator ei = std::lower_bound(n->begin(), n->end(), edge);
+          if (ei != n->end() && (*ei).id == id) {
+            n->erase(ei);
+        #endif
+          } else {
+            stringstream msg;
+            msg << "removeEdgesReliably : internal error : cannot find an edge. ID="
+            << id << " d=" << edge.distance << " in " << (*i).id << endl;
+          #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+            for (GraphNode::iterator ni = n->begin(repository.allocator); ni != n->end(repository.allocator); ni++) 
+          #else
+            for (GraphNode::iterator ni = n->begin(); ni != n->end(); ni++) 
+          #endif
+            {
+              msg << "check. " << (*ni).id << endl;
+            }
+          #ifdef NGT_FORCED_REMOVE
+            msg << " anyway continue...";
+            cerr << msg.str() << endl;
+          #else
+            NGTThrowException(msg.str());
+          #endif
+          }
+        }
+        i++;
       }
+
       for (unsigned int i = 0; i < node.size() - 1; i++) {
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	assert(node.at(i, repository.allocator).id != id);
-#else
-	assert(node[i].id != id);
-#endif
-	int minj = -1;
-	Distance mind = FLT_MAX;
-	for (unsigned int j = i + 1; j < node.size(); j++) {
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  assert(node.at(j, repository.allocator).id != id);
-#else
-	  assert(node[j].id != id);
-#endif
-	  Distance d = objectSpace->getComparator()(*objtbl[i], *objtbl[j]);
-	  if (d < mind) {
-	    minj = j;
-	    mind = d;
-	  }
-	}
-	assert(minj != -1);
-	bool insertionA = false;
-	bool insertionB = false;
-	{
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  ObjectDistance obj = node.at(minj, repository.allocator);
-#else
-	  ObjectDistance obj = node[minj];
-#endif
-	  obj.distance = mind;
-	  GraphNode &n = *nodetbl[i];
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  GraphNode::iterator ei = std::lower_bound(n.begin(repository.allocator), n.end(repository.allocator), obj);
-	  if ((ei == n.end(repository.allocator)) || ((*ei).id != obj.id)) {
-	    n.insert(ei, obj, repository.allocator);
-	    insertionA = true;
-	  }
-#else
-	  GraphNode::iterator ei = std::lower_bound(n.begin(), n.end(), obj);
+      #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+        assert(node.at(i, repository.allocator).id != id);
+      #else
+        assert(node[i].id != id);
+      #endif
+        int minj = -1;
+        Distance mind = FLT_MAX;
+        for (unsigned int j = i + 1; j < node.size(); j++) {
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          assert(node.at(j, repository.allocator).id != id);
+        #else
+          assert(node[j].id != id);
+        #endif
+          Distance d = objectSpace->getComparator()(*objtbl[i], *objtbl[j]);
+          if (d < mind) {
+            minj = j;
+            mind = d;
+          }
+        }
+
+        assert(minj != -1);
+        bool insertionA = false;
+        bool insertionB = false;
+        {
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          ObjectDistance obj = node.at(minj, repository.allocator);
+        #else
+          ObjectDistance obj = node[minj];
+        #endif
+          obj.distance = mind;
+          GraphNode &n = *nodetbl[i];
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          GraphNode::iterator ei = std::lower_bound(n.begin(repository.allocator), n.end(repository.allocator), obj);
+          if ((ei == n.end(repository.allocator)) || ((*ei).id != obj.id)) {
+            n.insert(ei, obj, repository.allocator);
+            insertionA = true;
+          }
+        #else
+          GraphNode::iterator ei = std::lower_bound(n.begin(), n.end(), obj);
           if ((ei == n.end()) || ((*ei).id != obj.id)) {
             n.insert(ei, obj);
-	    insertionA = true;
-	  }
-#endif
-	}
-	{
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  ObjectDistance obj = node.at(i, repository.allocator);
-#else
-	  ObjectDistance obj = node[i];
-#endif
-	  obj.distance = mind;
-	  GraphNode &n = *nodetbl[minj];
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  GraphNode::iterator ei = std::lower_bound(n.begin(repository.allocator), n.end(repository.allocator), obj);
-	  if ((ei == n.end(repository.allocator)) || ((*ei).id != obj.id)) {
-	    n.insert(ei, obj, repository.allocator);
-	    insertionB = true;
-	  }
-#else
-	  GraphNode::iterator ei = std::lower_bound(n.begin(), n.end(), obj);
+            insertionA = true;
+          }
+        #endif
+        }
+
+        {
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          ObjectDistance obj = node.at(i, repository.allocator);
+        #else
+          ObjectDistance obj = node[i];
+        #endif
+          obj.distance = mind;
+          GraphNode &n = *nodetbl[minj];
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          GraphNode::iterator ei = std::lower_bound(n.begin(repository.allocator), n.end(repository.allocator), obj);
+          if ((ei == n.end(repository.allocator)) || ((*ei).id != obj.id)) {
+            n.insert(ei, obj, repository.allocator);
+            insertionB = true;
+          }
+        #else
+          GraphNode::iterator ei = std::lower_bound(n.begin(), n.end(), obj);
           if ((ei == n.end()) || ((*ei).id != obj.id)) {
             n.insert(ei, obj);
-	    insertionB = true;
-	  }
-#endif
-	}
-	if (insertionA != insertionB) {
-	  stringstream msg;
-	  msg << "Graph::removeEdgeReliably:Warning. Lost conectivity! Isn't this ANNG? ID=" << id << ".";
-#ifdef NGT_FORCED_REMOVE
-	  msg << " Anyway continue...";
-	  cerr << msg.str() << endl;
-#else
-	  NGTThrowException(msg.str());
-#endif
-	}
-	if ((i + 1 < node.size()) && (i + 1 != (unsigned int)minj)) {
-	  ObjectDistance tmpr;
-	  PersistentObject *tmpf;
-	  GraphNode *tmprs;
+            insertionB = true;
+          }
+        #endif
+        }
 
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  tmpr = node.at(i + 1, repository.allocator);
-#else
-	  tmpr = node[i + 1];
-#endif
-	  tmpf = objtbl[i + 1];
-	  tmprs = nodetbl[i + 1];
+        if (insertionA != insertionB) {
+          stringstream msg;
+          msg << "Graph::removeEdgeReliably:Warning. Lost conectivity! Isn't this ANNG? ID=" << id << ".";
+        #ifdef NGT_FORCED_REMOVE
+          msg << " Anyway continue...";
+          cerr << msg.str() << endl;
+        #else
+          NGTThrowException(msg.str());
+        #endif
+        }
 
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  node.at(i + 1, repository.allocator) = node.at(minj, repository.allocator);
-#else
-	  node[i + 1] = node[minj];
-#endif
-	  objtbl[i + 1] = objtbl[minj];
-	  nodetbl[i + 1] = nodetbl[minj];
+        if ((i + 1 < node.size()) && (i + 1 != (unsigned int)minj)) {
+          ObjectDistance tmpr;
+          PersistentObject *tmpf;
+          GraphNode *tmprs;
 
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	  node.at(minj, repository.allocator) = tmpr;
-#else
-	  node[minj] = tmpr;
-#endif
-	  objtbl[minj] = tmpf;
-	  nodetbl[minj] = tmprs;
-	}
-      } 
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          tmpr = node.at(i + 1, repository.allocator);
+        #else
+          tmpr = node[i + 1];
+        #endif
+          tmpf = objtbl[i + 1];
+          tmprs = nodetbl[i + 1];
+
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          node.at(i + 1, repository.allocator) = node.at(minj, repository.allocator);
+        #else
+          node[i + 1] = node[minj];
+        #endif
+          objtbl[i + 1] = objtbl[minj];
+          nodetbl[i + 1] = nodetbl[minj];
+
+        #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+          node.at(minj, repository.allocator) = tmpr;
+        #else
+          node[minj] = tmpr;
+        #endif
+          objtbl[minj] = tmpf;
+          nodetbl[minj] = tmprs;
+        }
+      }
 
     } catch(Exception &err) {
       stringstream msg;
       msg << "removeEdgesReliably : Relink error ID=" << id << ":" << err.what();
-#ifdef NGT_FORCED_REMOVE
+    #ifdef NGT_FORCED_REMOVE
       cerr << msg.str() << " continue..." << endl;
-#else
+    #else
       NGTThrowException(msg.str());
-#endif
+    #endif
     }
 
     try {

@@ -56,6 +56,22 @@ void help() {
 int
 main(int argc, char **argv)
 {
+  #if defined(__AVX2__)
+    std::cout << "use AVX2  ..." << std::endl;
+  #elif defined(__AVX__)
+    std::cout << "use AVX  ..." << std::endl;
+  #else
+    std::cout << "use arch  ..." << std::endl;
+  #endif
+
+  #if defined(NGT_AVX2)
+   std::cout << "use NGT_AVX2  ..." << std::endl;
+  #elif defined(NGT_NO_AVX)
+    std::cout << "use NGT_NO_AVX  ..." << std::endl;
+  #endif
+
+  
+
   NGT::Args args(argc, argv);
 
   NGT::Command ngt;

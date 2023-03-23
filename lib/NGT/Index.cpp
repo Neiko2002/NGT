@@ -455,14 +455,14 @@ public:
       const int minimumEdge = 5;
       const float radiusInterval = 0.02;
       if (estimatedTime > buildTimeLimit) {
-	if (property.insertionRadiusCoefficient - radiusInterval >= 1.0) {
-	  property.insertionRadiusCoefficient -= radiusInterval;
-	} else {
-	  property.edgeSizeForCreation -= edgeInterval;
-	  if (property.edgeSizeForCreation < minimumEdge) {
-	    property.edgeSizeForCreation = minimumEdge;
-	  }
-	}
+        if (property.insertionRadiusCoefficient - radiusInterval >= 1.0) {
+          property.insertionRadiusCoefficient -= radiusInterval;
+        } else {
+          property.edgeSizeForCreation -= edgeInterval;
+          if (property.edgeSizeForCreation < minimumEdge) {
+            property.edgeSizeForCreation = minimumEdge;
+          }
+        }
       }
       time += timer.time;
       count += interval;
@@ -679,6 +679,7 @@ static void insertMultipleSearchResults(GraphIndex &neighborhoodGraph, CreateInd
     // The number of nodes in the graph is checked to know whether the batch is initial.
     // size_t size = NeighborhoodGraph::property.edgeSizeForCreation;
     size_t size = neighborhoodGraph.NeighborhoodGraph::property.edgeSizeForCreation;
+    // size_t size = neighborhoodGraph.NeighborhoodGraph::property.edgeSizeLimitForCreation;    // NICO
     // add distances from a current object to subsequence objects to imitate of
     // sequential insertion.
 
@@ -706,8 +707,11 @@ static void insertMultipleSearchResults(GraphIndex &neighborhoodGraph, CreateInd
   // insert resultant objects into the graph as edges
   for (size_t i = 0; i < dataSize; i++) {
     CreateIndexJob &gr = output[i];
+
     if ((*gr.results).size() == 0) {
+
     }
+
     if (static_cast<int>(gr.id) > neighborhoodGraph.NeighborhoodGraph::property.edgeSizeForCreation &&
         static_cast<int>(gr.results->size()) < neighborhoodGraph.NeighborhoodGraph::property.edgeSizeForCreation) {
       cerr << "createIndex: Warning. The specified number of edges could not "
@@ -720,6 +724,7 @@ static void insertMultipleSearchResults(GraphIndex &neighborhoodGraph, CreateInd
            << neighborhoodGraph.NeighborhoodGraph::property.edgeSizeForSearch
            << endl;
     }
+
     neighborhoodGraph.insertNode(gr.id, *gr.results);
   }
 }
@@ -1170,7 +1175,7 @@ GraphAndTreeIndex::createIndex(size_t threadPoolSize, size_t sizeOfRepository)
   }
 
   Timer	timer;
-  size_t	timerInterval = 100000;
+  size_t	timerInterval = 10000; // Nico default 100000
   size_t	timerCount = timerInterval;
   size_t	count = 0;
   timer.start();
@@ -1244,7 +1249,7 @@ GraphAndTreeIndex::createIndex(size_t threadPoolSize, size_t sizeOfRepository)
       count += cnt;
       if (timerCount <= count) {
         timer.stop();
-        cerr << "Processed " << timerCount << " objects. time= " << timer << endl;
+        cerr << "Processed " << timerCount << " objects. time= " << timer << ", memory usage=" << getCurrentRSS() / 1000000 << " Mb, peak memory usage=" << getPeakRSS() / 1000000 << " Mb" <<std::endl;
         timerCount += timerInterval;
         timer.start();
       }

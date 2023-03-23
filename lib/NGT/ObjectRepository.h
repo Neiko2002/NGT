@@ -110,75 +110,78 @@ namespace NGT {
 
     void appendText(std::istream &is, size_t dataSize = 0) {
       if (dimension == 0) {
-	NGTThrowException("ObjectSpace::readText: Dimension is not specified.");
+	      NGTThrowException("ObjectSpace::readText: Dimension is not specified.");
       }
+
       if (size() == 0) {
-	// First entry should be always a dummy entry.
-	// If it is empty, the dummy entry should be inserted.
-	push_back((PersistentObject*)0);
+        // First entry should be always a dummy entry.
+        // If it is empty, the dummy entry should be inserted.
+        push_back((PersistentObject*)0);
       }
+
       size_t prevDataSize = size();
       if (dataSize > 0) {
-	reserve(size() + dataSize);
+	      reserve(size() + dataSize);
       }
+
       std::string line;
       size_t lineNo = 0;
       while (getline(is, line)) {
-	lineNo++;
-	if (dataSize > 0 && (dataSize <= size() - prevDataSize)) {
-	  std::cerr << "The size of data reached the specified size. The remaining data in the file are not inserted. " 
-	       << dataSize << std::endl;
-	  break;
-	}
-	std::vector<double> object;
-	try {
-	  extractObjectFromText(line, "\t ", object);
-	  PersistentObject *obj = 0;
-	  try {
-	    obj = allocateNormalizedPersistentObject(object);
-	  } catch (Exception &err) {
-	    std::cerr << err.what() << " continue..." << std::endl;
-	    obj = allocatePersistentObject(object);
-	  }
-	  push_back(obj);
-	} catch (Exception &err) {
-	  std::cerr << "ObjectSpace::readText: Warning! Invalid line. [" << line << "] Skip the line " << lineNo << " and continue." << std::endl;
-	}
+        lineNo++;
+        if (dataSize > 0 && (dataSize <= size() - prevDataSize)) {
+          std::cerr << "The size of data reached the specified size. The remaining data in the file are not inserted. " << dataSize << std::endl;
+          break;
+        }
+        
+        std::vector<double> object;
+        try {
+          extractObjectFromText(line, "\t ", object);
+          PersistentObject *obj = 0;
+          try {
+            obj = allocateNormalizedPersistentObject(object);
+          } catch (Exception &err) {
+            std::cerr << err.what() << " continue..." << std::endl;
+            obj = allocatePersistentObject(object);
+          }
+          push_back(obj);
+        } catch (Exception &err) {
+          std::cerr << "ObjectSpace::readText: Warning! Invalid line. [" << line << "] Skip the line " << lineNo << " and continue." << std::endl;
+        }
       }
     }
 
     template <typename T>
     void append(T *data, size_t objectCount) {
       if (dimension == 0) {
-	NGTThrowException("ObjectSpace::readText: Dimension is not specified.");
+	      NGTThrowException("ObjectSpace::readText: Dimension is not specified.");
       }
       if (size() == 0) {
-	// First entry should be always a dummy entry.
-	// If it is empty, the dummy entry should be inserted.
-	push_back((PersistentObject*)0);
+        // First entry should be always a dummy entry.
+        // If it is empty, the dummy entry should be inserted.
+        push_back((PersistentObject*)0);
       }
       if (objectCount > 0) {
-	reserve(size() + objectCount);
+	      reserve(size() + objectCount);
       }
       for (size_t idx = 0; idx < objectCount; idx++, data += dimension) {
-	std::vector<double> object;
-	object.reserve(dimension);
-	for (size_t dataidx = 0; dataidx < dimension; dataidx++) {
-	  object.push_back(data[dataidx]);
-	}
-	try {
-	  PersistentObject *obj = 0;
-	  try {
-	    obj = allocateNormalizedPersistentObject(object);
-	  } catch (Exception &err) {
-	    std::cerr << err.what() << " continue..." << std::endl;
-	    obj = allocatePersistentObject(object);
-	  }
-	  push_back(obj);
+        std::vector<double> object;
+        object.reserve(dimension);
+        for (size_t dataidx = 0; dataidx < dimension; dataidx++) {
+          object.push_back(data[dataidx]);
+        }
+        try {
+          PersistentObject *obj = 0;
+          try {
+            obj = allocateNormalizedPersistentObject(object);
+          } catch (Exception &err) {
+            std::cerr << err.what() << " continue..." << std::endl;
+            obj = allocatePersistentObject(object);
+          }
+          push_back(obj);
 
-	} catch (Exception &err) {
-	  std::cerr << "ObjectSpace::readText: Warning! Invalid data. Skip the data no. " << idx << " and continue." << std::endl;
-	}
+        } catch (Exception &err) {
+          std::cerr << "ObjectSpace::readText: Warning! Invalid data. Skip the data no. " << idx << " and continue." << std::endl;
+        }
       }
     }
 

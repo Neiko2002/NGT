@@ -509,7 +509,7 @@ class GraphReconstructor {
       try {
 	NGT::GraphNode &n = *outGraph.getNode(id);
 	if (id % 100000 == 0) {
-	  std::cerr << "Processed " << id << " nodes" << std::endl;
+	  std::cerr << "Processed " << id << " nodes. memory usage: " << getCurrentRSS() / 1000000 << " Mb, peak memory usage: " << getPeakRSS() / 1000000 << " Mb" << std::endl;
 	}
 #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
 	std::sort(n.begin(outGraph.repository.allocator), n.end(outGraph.repository.allocator));

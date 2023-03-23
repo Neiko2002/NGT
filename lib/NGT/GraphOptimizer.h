@@ -222,12 +222,14 @@ namespace NGT {
           mins.push_back(std::make_pair(minpo, minps));
           break;
         }
+
         mins.push_back(std::make_pair(minpo, minps));
       }
       return std::make_pair(prefetchOffset, prefetchSize);
     }
 
     void execute(const std::string inIndexPath, const std::string outIndexPath) {
+      std::cout << "Actual memory usage: " << getCurrentRSS() / 1000000 << " Mb, Max memory usage: " << getPeakRSS() / 1000000 << " Mb" << std::endl;
 
       if (std::filesystem::exists(outIndexPath)) {
         std::stringstream msg;
@@ -241,6 +243,7 @@ namespace NGT {
         index.save(outIndexPath);
         index.close();
       }
+      std::cout << "Actual memory usage: " << getCurrentRSS() / 1000000 << " Mb, Max memory usage: " << getPeakRSS() / 1000000 << " Mb after copy index" << std::endl;
 
 /*
       const std::string com = "cp -r " + inIndexPath + " " + outIndexPath;
@@ -253,8 +256,11 @@ namespace NGT {
 */
 
       {
+        std::cerr << "Optimizer::execute: open index " << outIndexPath << std::endl;
         NGT::StdOstreamRedirector redirector(logDisabled);
         NGT::GraphIndex graphIndex(outIndexPath, false);
+        std::cout << "Actual memory usage: " << getCurrentRSS() / 1000000 << " Mb, Max memory usage: " << getPeakRSS() / 1000000 << " Mb after opening index" << std::endl;
+
         if (numOfOutgoingEdges > 0 || numOfIncomingEdges > 0) {
           if (!logDisabled) {
             std::cerr << "GraphOptimizer: adjusting outgoing and incoming edges..." << std::endl;
@@ -264,7 +270,7 @@ namespace NGT {
           timer.start();
           std::vector<NGT::ObjectDistances> graph;
           try {
-            std::cerr << "Optimizer::execute: Extract the graph data." << std::endl;
+            std::cerr << "Optimizer::execute: Extract the graph data. memory usage: " << getCurrentRSS() / 1000000 << " Mb, peak memory usage: " << getPeakRSS() / 1000000 << " Mb" << std::endl;
             // extract only edges from the index to reduce the memory usage.
             NGT::GraphReconstructor::extractGraph(graph, graphIndex);
             NeighborhoodGraph::Property &prop = graphIndex.getGraphProperty();
@@ -273,7 +279,7 @@ namespace NGT {
             }
             NGT::GraphReconstructor::reconstructGraph(graph, graphIndex, numOfOutgoingEdges, numOfIncomingEdges);
             timer.stop();
-            std::cerr << "Optimizer::execute: Graph reconstruction time=" << timer.time << " (sec) " << std::endl;
+            std::cerr << "Optimizer::execute: Graph reconstruction time=" << timer.time << " (sec). memory usage: " << getCurrentRSS() / 1000000 << " Mb, peak memory usage: " << getPeakRSS() / 1000000 << " Mb" << std::endl;
             graphIndex.saveGraph(outIndexPath);
             prop.graphType = NGT::NeighborhoodGraph::GraphTypeONNG;
             graphIndex.saveProperty(outIndexPath);
@@ -292,7 +298,7 @@ namespace NGT {
             timer.start();
             NGT::GraphReconstructor::adjustPathsEffectively(graphIndex, minNumOfEdges);
             timer.stop();
-            std::cerr << "Optimizer::execute: Path adjustment time=" << timer.time << " (sec) " << std::endl;
+            std::cerr << "Optimizer::execute: Path adjustment time=" << timer.time << " (sec). memory usage: " << getCurrentRSS() / 1000000 << " Mb, peak memory usage: " << getPeakRSS() / 1000000 << " Mb" << std::endl;
             graphIndex.saveGraph(outIndexPath);
           } catch (NGT::Exception &err) {
             redirector.end();
@@ -330,6 +336,7 @@ namespace NGT {
           msg << "Optimizer::execute: Cannot adjust the search coefficients. " << err.what();
           NGTThrowException(msg);
         }
+        std::cerr << "memory usage: " << getCurrentRSS() / 1000000 << " Mb, peak memory usage: " << getPeakRSS() / 1000000 << " Mb after optimizing search parameters" << std::endl;
       }
 
       if (searchParameterOptimization || prefetchParameterOptimization || accuracyTableGeneration) {
@@ -337,6 +344,7 @@ namespace NGT {
         redirector.begin();
         NGT::Index outIndex(outIndexPath, true);
         NGT::GraphIndex &outGraph = static_cast<NGT::GraphIndex &>(outIndex.getIndex());
+
         if (prefetchParameterOptimization) {
           if (!logDisabled) {
             std::cerr << "GraphOptimizer: optimizing prefetch parameters..." << std::endl;
@@ -355,7 +363,9 @@ namespace NGT {
             msg << "Optimizer::execute: Cannot adjust prefetch parameters. " << err.what();
             NGTThrowException(msg);
           }
+          std::cerr << "memory usage: " << getCurrentRSS() / 1000000 << " Mb, peak memory usage: " << getPeakRSS() / 1000000 << " Mb after optimizing prefetch parameters" << std::endl;
         }
+
         if (accuracyTableGeneration) {
           if (!logDisabled) {
             std::cerr << "GraphOptimizer: generating the accuracy table..." << std::endl;
@@ -369,12 +379,16 @@ namespace NGT {
             outIndex.setProperty(prop);
           } catch (NGT::Exception &err) {
             redirector.end();
+            std::cerr << "Optimizer::execute: Cannot generate the accuracy table." << err.what() << std::endl;
             std::stringstream msg;
             msg << "Optimizer::execute: Cannot generate the accuracy table. " << err.what();
             NGTThrowException(msg);
           }
+          std::cerr << "memory usage: " << getCurrentRSS() / 1000000 << " Mb, peak memory usage: " << getPeakRSS() / 1000000 << " Mb after generating the accuracy table" << std::endl;
         }
+
         try {
+          std::cerr << "GraphOptimizer: store properties..." << std::endl;
           outGraph.saveProperty(outIndexPath);
           redirector.end();
         } catch (NGT::Exception &err) {

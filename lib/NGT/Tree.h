@@ -203,16 +203,16 @@ namespace NGT {
 
     void removeNaively(ObjectID id, ObjectID replaceId = 0) {
       for (size_t i = 0; i < leafNodes.size(); i++) {
-	if (leafNodes[i] != 0) {
-	  try {
-#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-	    leafNodes[i]->removeObject(id, replaceId, leafNodes.allocator);
-#else
-	    leafNodes[i]->removeObject(id, replaceId);
-#endif
-	    break;
-	  } catch(...) {}
-	}
+	      if (leafNodes[i] != 0) {
+        try {
+      #if defined(NGT_SHARED_MEMORY_ALLOCATOR)
+            leafNodes[i]->removeObject(id, replaceId, leafNodes.allocator);
+      #else
+            leafNodes[i]->removeObject(id, replaceId);
+      #endif
+            break;
+          } catch(...) {}
+        }
       }
     }
 

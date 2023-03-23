@@ -32,13 +32,14 @@ static auto read_top_list(const char* fname, size_t& d_out, size_t& n_out)
     uint32_t dims;
     ifstream.read(reinterpret_cast<char*>(&dims), sizeof(int));
     assert((dims > 0 && dims < 1000000) || !"unreasonable dimension");
-    assert((file_size - 4) % ((dims + 1) * 4) == 0 || !"weird file size");
-    size_t n = (file_size - 4) / ((dims + 1) * 4);
+    assert(file_size % ((dims + 1) * 4) == 0 || !"weird file size");
+    size_t n = file_size / ((dims + 1) * 4);
 
     d_out = dims;
     n_out = n;
 
     auto x = std::make_unique<uint32_t[]>(n * (dims + 1));
+    ifstream.seekg(0);
     ifstream.read(reinterpret_cast<char*>(x.get()), n * (dims + 1) * sizeof(uint32_t));
     if (!ifstream) assert(ifstream.gcount() == static_cast<int>(n * (dims + 1)) || !"could not read whole file");
 
@@ -73,12 +74,13 @@ static void compute_stats(const char* graph_file, const uint32_t feature_dims, c
     // compute the graph quality
     uint64_t perfect_neighbor_count = 0;
     uint64_t total_neighbor_count = 0;
+    uint64_t graph_quality_count = 0;
     for (uint32_t n = 1; n < graph_size; n++) {
         auto node = graph.getNode(n);
         auto edges_per_node = node->size();
 
         // get top list of this node
-        auto top_list = all_top_list.get() + (n-1) * top_list_dims;
+        auto top_list = all_top_list.get() + (n-1) * top_list_dims; // -1 because NGT starts with node 1
         if(top_list_dims < edges_per_node) {
             std::cerr << "TopList for " << (n-1) << " is not long enough has " << edges_per_node << " elements has " << top_list_dims << std::endl;
             edges_per_node = (uint16_t) top_list_dims;
@@ -92,6 +94,10 @@ static void compute_stats(const char* graph_file, const uint32_t feature_dims, c
             // find in the neighbor ini the first few elements of the top list
             for (uint32_t i = 0; i < edges_per_node; i++) {
                 if(neighbor_index == top_list[i]) {
+
+                    if(i == 0)
+                        graph_quality_count++;
+
                     perfect_neighbor_count++;
                     break;
                 }
@@ -100,6 +106,7 @@ static void compute_stats(const char* graph_file, const uint32_t feature_dims, c
     }
     auto perfect_neighbor_ratio = (float) perfect_neighbor_count / total_neighbor_count;
     auto avg_edge_count = (float) total_neighbor_count / graph_size;
+    auto graph_quality = (float) graph_quality_count / graph_size;
 
     // compute the min, and max out degree
     uint16_t min_out =  std::numeric_limits<uint16_t>::max();
@@ -143,7 +150,7 @@ static void compute_stats(const char* graph_file, const uint32_t feature_dims, c
         }
     }
 
-    std::cout << "GQ " << perfect_neighbor_ratio << ", avg degree " << avg_edge_count << ", min_out " << min_out << ", max_out " << max_out << ", min_in " << min_in << ", max_in " << max_in << ", zero in nodes " << zero_in_count << "\n" << std::endl;
+    std::cout << "GQ " << graph_quality << ", PNR " << perfect_neighbor_ratio << ", avg degree " << avg_edge_count << ", min_out " << min_out << ", max_out " << max_out << ", min_in " << min_in << ", max_in " << max_in << ", zero in nodes " << zero_in_count << "\n" << std::endl;
 }
 
 
@@ -163,8 +170,9 @@ int main(int argc, char** argv) {
       std::cout << "use NGT_NO_AVX  ..." << std::endl;
     #endif
 
-    auto indexPath     = R"(c:/Data/Feature/SIFT1M/NGT/anng500-onng50_150_default)";  // GQ 0.405493, avg degree 62.9719, min_out 15, max_out 531, min_in 23, max_in 318, zero in nodes 0
-    auto top_list_file = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_base_top200_p0.998.ivecs)";
+    // auto indexPath        = R"(c:/Data/Feature/SIFT1M/NGT/anng100_onng10_120_default)";  // GQ 0.973031, PNR 0.351096, avg degree 49.3349, min_out 4,  max_out 626, min_in 18, max_in 143, zero in nodes 0
+    auto indexPath     = R"(c:/Data/Feature/SIFT1M/NGT/anng500-onng50_150_default)";        // GQ 0.98296,  PNR 0.405321, avg degree 63.0182, min_out 15, max_out 531, min_in 23, max_in 318, zero in nodes 0
+    auto top_list_file = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_base_top1000.ivecs)";
     compute_stats(indexPath, 128, top_list_file);
 
     std::cout << "Finished" << std::endl;
