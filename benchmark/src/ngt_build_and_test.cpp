@@ -34,9 +34,9 @@ struct ONNGParams {
     int numOfOutgoingEdges = 10;
     int numOfIncomingEdges = 120;
     int minNumOfEdges = 0;
-    int numOfResults = 20;
     double gtEpsilon = 0.1;
     double margin = 0.2;
+    int numOfResults = 100;
     int numOfQueries = 100;
     bool varianceControl = false;  // Not explicitly in l2-float but part of optimizer
 };
@@ -62,27 +62,19 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
     conf.dataset_name = dataset_name;
 
     if (dataset_name == DatasetName::SIFT1M) {
-        // Deep1M (Using Deep1M params as they are similar and explicitly listed in l2-float for Deep1M which is similar to SIFT1M)
-        // Or using SIFT1M params from l2-float comments
+        // NGT repo SIFT1M
+        conf.anng.edgeSizeLimitForCreation = 100;    // same as edgeSizeForCreation
+        conf.anng.edgeSizeForCreation = 100;         // kc with kc > eo and kc > ei
+        conf.anng.insertionRadiusCoefficient = 1.1;  // eps_c´= 0.1
+        conf.anng.outgoingEdge = 10;                 // eo
+        conf.anng.incomingEdge = 120;                // ei
 
-        // SIFT1M from l2-float comment:
-        // property.edgeSizeLimitForCreation = 100;
-        // property.edgeSizeForCreation = 100;
-        // property.insertionRadiusCoefficient = 1.1;
-        // property.outgoingEdge = 10;
-        // property.incomingEdge = 120;
-
-        // However, standard ONNG defaults in l2-float:
-        conf.anng.edgeSizeForCreation = 100;
-        conf.anng.edgeSizeLimitForCreation = 100;
-        conf.anng.insertionRadiusCoefficient = 1.1;
-        conf.anng.outgoingEdge = 10;
-        conf.anng.incomingEdge = 120;
-
-        // ONNG from l2-float defaults:
+        // NGT repo for SIFT1M
+        // https://github.com/erikbern/ann-benchmarks/blob/master/algos.yaml#L378
+        // https://github.com/erikbern/ann-benchmarks/blob/master/ann_benchmarks/algorithms/onng_ngt.py
+        // https://github.com/yahoojapan/NGT/tree/main/bin/ngt
         conf.onng.numOfOutgoingEdges = 10;
-        conf.onng.numOfIncomingEdges = 120;  // 120
-        conf.onng.numOfResults = 20;
+        conf.onng.numOfIncomingEdges = 120;
 
         // ANNS Test
         conf.anns_k = 100;
@@ -90,14 +82,14 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.explore_k = 1000;
 
     } else if (dataset_name == DatasetName::DEEP1M) {
-        // Deep1M from l2-float
+        // Deep1M, same as ONNG Paper Table 3 for SIFT1M
         conf.anng.edgeSizeLimitForCreation = 200;
         conf.anng.edgeSizeForCreation = 200;
         conf.anng.insertionRadiusCoefficient = 1.1;
         conf.anng.outgoingEdge = 30;
         conf.anng.incomingEdge = 110;
 
-        conf.onng.numOfResults = 20;
+        // Deep1M, same as ONNG Paper Table 3 for SIFT1M
         conf.onng.numOfOutgoingEdges = 30;
         conf.onng.numOfIncomingEdges = 110;
 
@@ -105,7 +97,6 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.explore_k = 1000;
 
     } else if (dataset_name == DatasetName::GLOVE) {
-        // Glove from l2-float comments
         // ONNG Paper Table 3 on GloVe
         conf.anng.edgeSizeLimitForCreation = 200;
         conf.anng.edgeSizeForCreation = 200;
@@ -114,7 +105,6 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.anng.incomingEdge = 155;
 
         // ONNG Paper for GloVe
-        conf.onng.numOfResults = 20;
         conf.onng.numOfOutgoingEdges = 15;
         conf.onng.numOfIncomingEdges = 155;
 
@@ -122,12 +112,12 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.explore_k = 1000;
 
     } else if (dataset_name == DatasetName::ENRON) {
-        // Enron (Weaves ANNG params from l2-float comments as base?)
+        // Enron (Weaves ANNG params)
         conf.anng.edgeSizeLimitForCreation = 200;
         conf.anng.edgeSizeForCreation = 200;
         conf.anng.insertionRadiusCoefficient = 1.1;
         conf.anng.outgoingEdge = 20;
-        conf.anng.incomingEdge = 100;  // ONNG parameter used in ANNG section of comment?
+        conf.anng.incomingEdge = 100;
 
         // WEAVES on Enron
         conf.onng.numOfOutgoingEdges = 20;
@@ -174,8 +164,7 @@ struct GraphPaths {
     }
 
     std::string onng_base_name(const ANNGParams& anng, const ONNGParams& onng) const {
-        return string_format(
-            "onng_out%u_in%u_res%u_%s", onng.numOfOutgoingEdges, onng.numOfIncomingEdges, onng.numOfResults, anng_base_name(anng).c_str());
+        return string_format("onng_out%u_in%u_%s", onng.numOfOutgoingEdges, onng.numOfIncomingEdges, anng_base_name(anng).c_str());
     }
 
     std::string graph_directory() const { return ngt_dir.string(); }
@@ -215,8 +204,17 @@ static void run_create_anng(const Dataset& ds, const ANNGParams& params, const s
     property.insertionRadiusCoefficient = params.insertionRadiusCoefficient;
     property.pathAdjustmentInterval = 0;
     property.dynamicEdgeSizeBase = 30;
-    property.buildTimeLimit = 0;
+    log("\n--------------------------------------------------------------------------------\n");
+    log("Creating ANNG Index: %s\n", indexPath.c_str());
+    log("  Properties:\n");
+    log("    EdgeSizeForCreation: %d\n", property.edgeSizeForCreation);
+    log("    EdgeSizeLimitForCreation: %d\n", property.edgeSizeLimitForCreation);
+    log("    InsertionRadiusCoefficient: %.2f\n", property.insertionRadiusCoefficient);
+    log("    OutgoingEdge: %d\n", property.outgoingEdge);
+    log("    IncomingEdge: %d\n", property.incomingEdge);
+    log("    ThreadPoolSize: %d\n", property.threadPoolSize);
 
+    log("Start creating ANNG index files...\n");
     NGT::Index::create(indexPath, property);
     NGT::Index index(indexPath);
 
@@ -242,20 +240,34 @@ static void run_create_onng(const std::string& anngPath, const std::string& onng
         return;
     }
 
+    log("\n--------------------------------------------------------------------------------\n");
     log("Converting ANNG to ONNG: %s -> %s\n", anngPath.c_str(), onngPath.c_str());
 
     NGT::GraphOptimizer graphOptimizer(false);
-    graphOptimizer.shortcutReduction = true;
-    graphOptimizer.searchParameterOptimization = true;
-    graphOptimizer.prefetchParameterOptimization = true;
-    graphOptimizer.accuracyTableGeneration = false;
-    graphOptimizer.gtEpsilon = params.gtEpsilon;
-    graphOptimizer.margin = params.margin;
-    graphOptimizer.minNumOfEdges = params.minNumOfEdges;
-    graphOptimizer.numOfQueries = params.numOfQueries;
-    graphOptimizer.numOfResults = params.numOfResults;
-    graphOptimizer.numOfOutgoingEdges = params.numOfOutgoingEdges;
-    graphOptimizer.numOfIncomingEdges = params.numOfIncomingEdges;
+    graphOptimizer.shortcutReduction = true;                        // (default=true)
+    graphOptimizer.searchParameterOptimization = true;              // (default=true)
+    graphOptimizer.prefetchParameterOptimization = true;            // (default=true)
+    graphOptimizer.accuracyTableGeneration = false;                 // does not work (default=true)
+    graphOptimizer.gtEpsilon = params.gtEpsilon;                    // eps for searching the ground truth data (default=0.1)
+    graphOptimizer.margin = params.margin;                          // (default=0.2)
+    graphOptimizer.minNumOfEdges = params.minNumOfEdges;            // E (default=0)
+    graphOptimizer.numOfQueries = params.numOfQueries;              // # of ground truth objects  (default=100)
+    graphOptimizer.numOfResults = params.numOfResults;              // # of resultant objects (default=20)
+    graphOptimizer.numOfOutgoingEdges = params.numOfOutgoingEdges;  // i (ONNG parameter) (default=10)
+    graphOptimizer.numOfIncomingEdges = params.numOfIncomingEdges;  // o (ONNG parameter) (default=120)
+
+    log("  Optimizer Settings:\n");
+    log("    ShortcutReduction: %s\n", graphOptimizer.shortcutReduction ? "true" : "false");
+    log("    SearchParamOptimization: %s\n", graphOptimizer.searchParameterOptimization ? "true" : "false");
+    log("    PrefetchParamOptimization: %s\n", graphOptimizer.prefetchParameterOptimization ? "true" : "false");
+    log("    AccuracyTableGeneration: %s\n", graphOptimizer.accuracyTableGeneration ? "true" : "false");
+    log("    GTEpsilon: %.2f\n", graphOptimizer.gtEpsilon);
+    log("    Margin: %.2f\n", graphOptimizer.margin);
+    log("    MinNumOfEdges: %d\n", graphOptimizer.minNumOfEdges);
+    log("    NumOfQueries: %d\n", graphOptimizer.numOfQueries);
+    log("    NumOfResults: %d\n", graphOptimizer.numOfResults);
+    log("    NumOfOutgoingEdges: %d\n", graphOptimizer.numOfOutgoingEdges);
+    log("    NumOfIncomingEdges: %d\n", graphOptimizer.numOfIncomingEdges);
 
     StopW sw;
     graphOptimizer.execute(anngPath, onngPath);
@@ -364,18 +376,12 @@ static void run_test(const Dataset& ds, const DatasetConfig& conf, const GraphPa
     auto query_data = ds.load_query();
     auto ground_truth = ds.load_groundtruth(conf.anns_k);
 
-    log("\n--- ANNS Test ---\n");
-    test_ngt_anns(index,
-                  query_data.data,
-                  query_data.num,
-                  query_data.dim,
-                  ground_truth,
-                  conf.anns_k,
-                  conf.epsilons,
-                  conf.anns_repeat,
-                  0.99f /* recall target */);
+    log("\n--------------------------------------------------------------------------------\n");
+    log("--- ANNS Test ---\n");
+    test_ngt_anns(index, query_data.data, query_data.num, query_data.dim, ground_truth, conf.anns_k, conf.epsilons, conf.anns_repeat);
 
-    log("\n--- Exploration Test ---\n");
+    log("\n--------------------------------------------------------------------------------\n");
+    log("--- Exploration Test ---\n");
     run_exploration_test_suite(index, ds, conf, query_data);
 
     reset_log_to_console();
@@ -385,7 +391,7 @@ int main(int argc, char** argv) {
     log("NGT Benchmark Suite\n");
 
     std::string data_root = DATA_PATH;
-    DatasetName ds_name = DatasetName::AUDIO;
+    DatasetName ds_name = DatasetName::ENRON;
     bool do_run = true;
 
     if (argc > 1) {
