@@ -130,11 +130,33 @@ int createANNGIndex(const char * indexPath, const char * featurePath, const int 
 
     // ONNG Paper Table 3 on GloVe
     // https://arxiv.org/pdf/1810.07355.pdf 
+    // property.edgeSizeLimitForCreation = 200;     // same as edgeSizeForCreation
+    // property.edgeSizeForCreation = 200;          // kc with kc > eo and kc > ei
+    // property.insertionRadiusCoefficient = 1.1;   // eps_c´= 0.1
+    // property.outgoingEdge = 15;                  // eo
+    // property.incomingEdge = 155;                 // ei
+
+    // WEAVES ANNG on Enron
+    // property.edgeSizeLimitForCreation = 200;             // K=200 is nn and limits the number of neighbors (ANNG parameter)
+    // property.edgeSizeForCreation = 200;                  // L=200 is ef_construction and limits the number of search result (ANNG parameter)
+    // property.insertionRadiusCoefficient = 1.1;           // not in weaves but default (ANNG parameter)
+    // property.outgoingEdge = 20;                          // (ONNG parameter)
+    // property.incomingEdge = 100;                         // (ONNG parameter)
+
+    // // WEAVES ANNG on Audio
+    // property.edgeSizeLimitForCreation = 200;             // K=200 is nn and limits the number of neighbors (ANNG parameter)
+    // property.edgeSizeForCreation = 200;                  // L=200 is ef_construction and limits the number of search result (ANNG parameter)
+    // property.insertionRadiusCoefficient = 1.1;           // not in weaves but default (ANNG parameter)
+    // property.outgoingEdge = 40;                          // (ONNG parameter)
+    // property.incomingEdge = 100;                         // (ONNG parameter)
+
+    // Deep1M
     property.edgeSizeLimitForCreation = 200;     // same as edgeSizeForCreation
     property.edgeSizeForCreation = 200;          // kc with kc > eo and kc > ei
     property.insertionRadiusCoefficient = 1.1;   // eps_c´= 0.1
-    property.outgoingEdge = 15;                  // eo
-    property.incomingEdge = 155;                 // ei
+    property.outgoingEdge = 30;                  // eo
+    property.incomingEdge = 110;                 // ei
+
 
     std::cout << "Start creating ANNG index files" << std::endl;
     NGT::Index::create(indexPath, property);
@@ -328,9 +350,24 @@ int reconstructONNGIndex(const char * anngIndexPath, const char * onngIndexPath)
 
       // NGT Paper for GloVe
       // https://arxiv.org/pdf/1810.07355.pdf 
+      // graphOptimizer.numOfResults = 20; 
+      // graphOptimizer.numOfOutgoingEdges = 15;
+      // graphOptimizer.numOfIncomingEdges = 155;
+
+      // WEAVES on Enron
+      // https://github.com/Lsyhprum/WEAVESS/tree/dev/parameters
+      // graphOptimizer.numOfOutgoingEdges = 20;
+      // graphOptimizer.numOfIncomingEdges = 100;
+
+      // WEAVES on Audio
+      // https://github.com/Lsyhprum/WEAVESS/tree/dev/parameters
+      // graphOptimizer.numOfOutgoingEdges = 40;
+      // graphOptimizer.numOfIncomingEdges = 100;
+
+      // Deep1M
       graphOptimizer.numOfResults = 20; 
-      graphOptimizer.numOfOutgoingEdges = 15;
-      graphOptimizer.numOfIncomingEdges = 155;
+      graphOptimizer.numOfOutgoingEdges = 30;
+      graphOptimizer.numOfIncomingEdges = 110;
 
 
       // Parameters stored in anngIndexPath influence the optimizer
@@ -376,11 +413,31 @@ int main(int argc, char **argv)
   // auto objectFile       = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_base.fvecs)";
 
   // GloVe
-  auto anngIndexPath    = R"(e:/Data/Feature/GloVe/NGT/anng K200 eps1.1)";
-  auto rnngIndexPath    = R"(e:/Data/Feature/GloVe/NGT/rnng K200 eps1.1)";
-  auto onngIndexPath    = R"(e:/Data/Feature/GloVe/NGT/onng in15 out155 noTable (anng K200 eps1.1))";
-  auto objectFile       = R"(e:/Data/Feature/GloVe/glove-100/glove-100_base.fvecs)";
+  // auto anngIndexPath    = R"(e:/Data/Feature/GloVe/NGT/anng K200 eps1.1)";
+  // auto rnngIndexPath    = R"(e:/Data/Feature/GloVe/NGT/rnng K200 eps1.1)";
+  // auto onngIndexPath    = R"(e:/Data/Feature/GloVe/NGT/onng in15 out155 noTable (anng K200 eps1.1))";
+  // auto objectFile       = R"(e:/Data/Feature/GloVe/glove-100/glove-100_base.fvecs)";
   
+  // Enron
+  // auto anngIndexPath    = R"(e:/Data/Feature/Enron/NGT/anng K200 eps1.1)";
+  // auto rnngIndexPath    = R"(e:/Data/Feature/Enron/NGT/rnng K200 eps1.1)";
+  // auto onngIndexPath    = R"(e:/Data/Feature/Enron/NGT/onng in20 out100 noTable (anng K200 eps1.1))";
+  // auto objectFile       = R"(e:/Data/Feature/Enron/enron/enron_base.fvecs)";
+
+  // Audio
+  // auto anngIndexPath    = R"(e:/Data/Feature/Audio/NGT/anng K200 eps1.1)";
+  // auto rnngIndexPath    = R"(e:/Data/Feature/Audio/NGT/rnng K200 eps1.1)";
+  // auto onngIndexPath    = R"(e:/Data/Feature/Audio/NGT/onng in40 out100 noTable (anng K200 eps1.1))";
+  // auto objectFile       = R"(e:/Data/Feature/Audio/audio/audio_base.fvecs)";
+
+
+  // Deep1M
+  auto anngIndexPath    = R"(e:/Data/Feature/Deep1M/NGT/anng K200 eps1.1)";
+  auto rnngIndexPath    = R"(e:/Data/Feature/Deep1M/NGT/rnng K200 eps1.1)";
+  auto onngIndexPath    = R"(e:/Data/Feature/Deep1M/NGT/in30 out110 noTable (anng K200 eps1.1))";
+  auto objectFile       = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_base.fvecs)";
+
+
   auto threadNumber = 1;
 
   // anng index construction

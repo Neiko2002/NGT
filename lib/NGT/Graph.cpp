@@ -431,14 +431,16 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
       target = unchecked.top();
       unchecked.pop();
       if (target.distance > explorationRadius) {
-	break;
+	      break;
       }
       neighbors = &nodes[target.id];
       neighborptr = &(*neighbors)[0];
       size_t neighborSize = neighbors->size() < edgeSize ? neighbors->size() : edgeSize;
       neighborendptr = neighborptr + neighborSize;
 
-      auto* nsPtrs = static_cast<std::pair<uint64_t, PersistentObject*>**>(alloca(sizeof(std::pair<uint64_t, PersistentObject*>*) * neighborSize));
+      // pair<uint64_t, PersistentObject*>* nsPtrs[neighborSize]; // orig
+      // auto* nsPtrs = static_cast<std::pair<uint64_t, PersistentObject*>**>(alloca(sizeof(std::pair<uint64_t, PersistentObject*>*) * neighborSize)); // converted
+      auto nsPtrs = std::vector<pair<uint64_t, PersistentObject*>*>(neighborSize); // fixed
       size_t nsPtrsSize = 0;
 
       for (; neighborptr < neighborendptr; ++neighborptr) {
@@ -452,36 +454,36 @@ NeighborhoodGraph::setupSeeds(NGT::SearchContainer &sc, ObjectDistances &seeds, 
        }
       }
       for (size_t idx = 0; idx < nsPtrsSize; idx++) {
-	neighborptr = nsPtrs[idx]; 
-	if (idx + prefetchOffset < nsPtrsSize) {
-	  const char *ptr = reinterpret_cast<const char*>((*(nsPtrs[idx + prefetchOffset])).second);
-	  MemoryCache::prefetch(ptr, prefetchSize);
-	}
-#ifdef NGT_VISIT_COUNT
-	sc.visitCount++;
-#endif
-	auto &neighbor = *neighborptr;
-        distanceChecked.insert(neighbor.first);
+        neighborptr = nsPtrs[idx]; 
+        if (idx + prefetchOffset < nsPtrsSize) {
+          const char *ptr = reinterpret_cast<const char*>((*(nsPtrs[idx + prefetchOffset])).second);
+          MemoryCache::prefetch(ptr, prefetchSize);
+        }
+      #ifdef NGT_VISIT_COUNT
+        sc.visitCount++;
+      #endif
+        auto &neighbor = *neighborptr;
+              distanceChecked.insert(neighbor.first);
 
-#ifdef NGT_DISTANCE_COMPUTATION_COUNT
-	sc.distanceComputationCount++;
-#endif
-	Distance distance = COMPARATOR::compare((void*)&sc.object[0], 
-						(void*)&(*static_cast<PersistentObject*>(neighbor.second))[0], dimension);
-	if (distance <= explorationRadius) {
-	  result.set(neighbor.first, distance);
-	  unchecked.push(result);
-	  if (distance <= sc.radius) {
-	    results.push(result);
-	    if (results.size() >= sc.size) {
-	      if (results.size() > sc.size) {
-	        results.pop();
-	      }
-	      sc.radius = results.top().distance;
-	      explorationRadius = sc.explorationCoefficient * sc.radius;
-	    } 
-	  } 
-	} 
+      #ifdef NGT_DISTANCE_COMPUTATION_COUNT
+        sc.distanceComputationCount++;
+      #endif
+        Distance distance = COMPARATOR::compare((void*)&sc.object[0], 
+                  (void*)&(*static_cast<PersistentObject*>(neighbor.second))[0], dimension);
+        if (distance <= explorationRadius) {
+          result.set(neighbor.first, distance);
+          unchecked.push(result);
+          if (distance <= sc.radius) {
+            results.push(result);
+            if (results.size() >= sc.size) {
+              if (results.size() > sc.size) {
+                results.pop();
+              }
+              sc.radius = results.top().distance;
+              explorationRadius = sc.explorationCoefficient * sc.radius;
+            } 
+          } 
+        } 
       } 
     }
 

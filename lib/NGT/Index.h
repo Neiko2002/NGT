@@ -1654,7 +1654,7 @@ namespace NGT {
         sc.distanceComputationCount = 0;
         sc.visitCount = 0;
 
-        // initial ssed
+        // initial seed
         ObjectDistances	seeds;
         ObjectDistance	initial_node;
         initial_node.id = initial_node_id;

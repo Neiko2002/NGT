@@ -69,6 +69,17 @@ static std::vector<std::unordered_set<uint32_t>> get_ground_truth(const uint32_t
     return answers;
 }
 
+template<typename... Args>
+std::string string_format(const char* fmt, Args... args)
+{
+    size_t size = snprintf(nullptr, 0, fmt, args...);
+    std::string buf;
+    buf.reserve(size + 1);
+    buf.resize(size);
+    snprintf(&buf[0], size + 1, fmt, args...);
+    return buf;
+}
+
 int main(int argc, char **argv)
 {
   
@@ -86,18 +97,49 @@ int main(int argc, char **argv)
     std::cout << "use NGT_NO_AVX  ..." << std::endl;
   #endif
  
-
-  auto indexPath        = R"(c:/Data/Feature/SIFT1M/NGT/anng500-onng50_150_default)";
-  auto objectFile       = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_base.fvecs)";
-  auto queryFile       = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_explore_query.fvecs)";
-  auto groundtruthFile = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_explore_ground_truth.ivecs)";
-  auto entryNodeFile  = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_explore_entry_node.ivecs)";
-  uint32_t maxK = 1000;
+  auto readOnly         = false;
+  uint32_t k = 1000;
   unsigned seed = 161803398;
   srand(seed);
 
+  // // ----------------------------------------- SIFT1M ------------------------------------------------
+  // auto indexPath       = R"(e:/Data/Feature/SIFT1M/NGT/onng in30 out110 noTable (anng K200 eps1.1))";
+  // auto queryFile       = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_explore_query.fvecs)";
+  // auto groundtruthFile = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_explore_ground_truth.ivecs)";
+  // auto entryNodeFile   = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_explore_entry_vertex.ivecs)";
 
-  auto index = NGT::Index(indexPath);
+  // // ----------------------------------------- Glove ------------------------------------------------
+  // auto indexPath       = R"(e:/Data/Feature/GloVe/NGT/onng in15 out155 noTable (anng K200 eps1.1))";
+  // auto queryFile       = R"(e:/Data/Feature/GloVe/glove-100/glove-100_explore_query.fvecs)";
+  // auto groundtruthFile = R"(e:/Data/Feature/GloVe/glove-100/glove-100_explore_ground_truth.ivecs)";
+  // auto entryNodeFile   = R"(e:/Data/Feature/GloVe/glove-100/glove-100_explore_entry_vertex.ivecs)";
+  // auto eps             = 0.03f;
+
+  // ----------------------------------------- Enron ------------------------------------------------
+  // auto indexPath       = R"(e:/Data/Feature/Enron/NGT/onng in20 out100 noTable (anng K200 eps1.1))";
+  // auto queryFile       = R"(e:/Data/Feature/Enron/enron/enron_explore_query.fvecs)";
+  // auto groundtruthFile = R"(e:/Data/Feature/Enron/enron/enron_explore_ground_truth.ivecs)";
+  // auto entryNodeFile   = R"(e:/Data/Feature/Enron/enron/enron_explore_entry_vertex.ivecs)";
+  // auto eps             = 0.012f;
+
+  // ----------------------------------------- Audio ------------------------------------------------
+  // auto indexPath       = R"(e:/Data/Feature/Audio/NGT/onng in40 out100 noTable (anng K200 eps1.1))";
+  // auto queryFile       = R"(e:/Data/Feature/Audio/audio/audio_explore_query.fvecs)";
+  // auto groundtruthFile = R"(e:/Data/Feature/Audio/audio/audio_explore_ground_truth.ivecs)";
+  // auto entryNodeFile   = R"(e:/Data/Feature/Audio/audio/audio_explore_entry_vertex.ivecs)";
+  // auto eps             = 0.03f;
+
+  // ----------------------------------------- Deep1M ------------------------------------------------
+  auto indexPath       = R"(e:/Data/Feature/Deep1M/NGT/in30 out110 noTable (anng K200 eps1.1))";
+  auto queryFile       = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_explore_query.fvecs)";
+  auto groundtruthFile = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_explore_ground_truth.ivecs)";
+  auto entryNodeFile   = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_explore_entry_vertex.ivecs)";
+  auto eps             = 0.03f;
+
+
+
+  std::cout << "Load index (readOnly=" << readOnly << ")" << std::endl;
+  auto index = NGT::Index(indexPath, readOnly);
   NGT::Property	property;
   index.getProperty(property);
 
@@ -110,6 +152,7 @@ int main(int argc, char **argv)
   std::cout << "graphType: " << property.graphType << std::endl;                      // GraphTypeANNG	= 1
   std::cout << "indexType: " << property.indexType << std::endl;                      // GraphAndTree		= 1,
   std::cout << "accuracyTable: " << property.accuracyTable << std::endl;               
+  std::cout << "eps: " << eps << std::endl;               
 
 
   // query data
@@ -120,42 +163,52 @@ int main(int argc, char **argv)
   size_t groundtruth_num, groundtruth_dim;
   auto groundtruth_f = fvecs_read(groundtruthFile, groundtruth_dim, groundtruth_num);
   const auto ground_truth = (uint32_t*)groundtruth_f.get(); // not very clean, works as long as sizeof(int) == sizeof(float)
+  const auto answers = get_ground_truth(ground_truth, groundtruth_num, groundtruth_dim, k);
 
   // entry node ids
   size_t entrynode_num, entrynode_dim;
   auto entrynode_f = fvecs_read(entryNodeFile, entrynode_dim, entrynode_num);
   const auto entry_node = (uint32_t*)entrynode_f.get(); // not very clean, works as long as sizeof(int) == sizeof(float)
 
-  auto steps = 30;
-  for (size_t i = 3; i <= steps; i++) {
-    const auto K = maxK;
-    const auto max_distance_count = uint32_t(K + (K/1 * i));
+  uint32_t k_factor = 100;
+  for (uint32_t f = 0; f <= 3; f++, k_factor *= 10) {
+    for (uint32_t i = (f == 0) ? 1 : 2; i < 11; i++) {         
+      const auto max_distance_count = ((f == 0) ? (k + k_factor * (i-1)) : (k_factor * i));
 
-    const auto answers = get_ground_truth(ground_truth, groundtruth_num, groundtruth_dim, K);
-    auto time_begin = std::chrono::steady_clock::now();
+      auto time_begin = std::chrono::steady_clock::now();
 
-    size_t correct = 0;
-    for (unsigned i = 0; i < query_num; i++) {
-      auto entry_node_index = (uint32_t)  (entry_node[i * entrynode_dim] + 1);
-      auto query = std::vector(query_data.get() + i * query_dim, query_data.get() + i * query_dim + query_dim);
-      NGT::SearchQuery		sc(query);
-      NGT::ObjectDistances	objects;
-      sc.setResults(&objects);
-      sc.setSize(K);
-      sc.setEpsilon(0.00f); // why does -0.005f improve the quality?
+      size_t correct = 0;
+      size_t empty_list = 0;
+      size_t short_list = 0;
+      size_t max_ids_in_result = 0;
+      for (unsigned q = 0; q < query_num; q++) {
+        auto entry_node_index = (uint32_t)  (entry_node[q * entrynode_dim] + 1);
+        auto query = std::vector(query_data.get() + q * query_dim, query_data.get() + q * query_dim + query_dim);
+        NGT::SearchQuery		sc(query);
+        NGT::ObjectDistances	objects;
+        sc.setResults(&objects);
+        sc.setSize(k);
+        sc.setEpsilon(eps); // why does -0.005f improve the quality?
 
-      index.explore(sc, entry_node_index, max_distance_count);
+        index.explore(sc, entry_node_index, max_distance_count);
 
-      // compare answer with ann
-      auto answer = answers[i];
-      for (size_t r = 0; r < K; r++) 
-        if (answer.find(objects[r].id - 1) != answer.end()) correct++; // all ids in the index to high by 1 value
+        // compare answer with ann
+        auto answer = answers[q];
+        for (size_t r = 0; r < k; r++) 
+          if (answer.find(objects[r].id - 1) != answer.end()) correct++; // all ids in the index to high by 1 value
+
+        max_ids_in_result += k - objects.size();
+        if(objects.size() < k)
+          short_list++;
+        if(objects.size() == 0)
+          empty_list++;
+      }
+
+      auto time_end = std::chrono::steady_clock::now();
+      auto time_us_per_query = (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count()) / query_num;
+      auto recall = 1.0f * correct / (query_num * k);
+      std::cout << string_format("k and p %5d, max_distance_count %6d, recall %.4f, time_us_per_query %6d, empty_list %6d, short_list %6d, max_ids_in_result %6d\n", k, max_distance_count, recall, time_us_per_query, empty_list, short_list, max_ids_in_result);
     }
-
-    auto time_end = std::chrono::steady_clock::now();
-    auto time_us_per_query = (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count()) / query_num;
-    auto recall = 1.0f * correct / (query_num * K);
-    std::cout << "k and p " << K << ", max_distance_count " << max_distance_count << ", recall " << recall << " time_us_per_query " << time_us_per_query << std::endl;
   }
 
   return 0;

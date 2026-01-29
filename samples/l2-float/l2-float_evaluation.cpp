@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <assert.h>
 
 
@@ -69,6 +70,17 @@ static std::vector<std::unordered_set<uint32_t>> get_ground_truth(const uint32_t
     return answers;
 }
 
+template<typename... Args>
+std::string string_format(const char* fmt, Args... args)
+{
+    size_t size = snprintf(nullptr, 0, fmt, args...);
+    std::string buf;
+    buf.reserve(size + 1);
+    buf.resize(size);
+    snprintf(&buf[0], size + 1, fmt, args...);
+    return buf;
+}
+
 int main(int argc, char **argv)
 {
   
@@ -86,26 +98,56 @@ int main(int argc, char **argv)
     std::cout << "use NGT_NO_AVX  ..." << std::endl;
   #endif
  
-  auto readOnly         = false;
+  auto readOnly         = true;
   auto treeDisabled     = false; // true if ONNG was build with PANNG 
 
+  unsigned K = 100;  
+  unsigned repeat_test = 1;
+  unsigned seed = 161803398;
+  srand(seed);
 
   // SIFT
-  // auto objectFile       = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_base.fvecs)";
   // auto queryFile        = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_query.fvecs)";
   // auto groundtruthFile	= R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_groundtruth.ivecs)";
   // auto indexPath        = R"(e:/Data/Feature/SIFT1M/NGT/in30 out110 noTable (anng200 eps1.1))";
   // std::vector<float> exploration_coefficients = { -0.03f, -0.02f, -0.01f, -0.005f, -0.001f, 0.005f, 0.01f, 0.03f, 0.05f};
 
-  // GloVe
-  auto objectFile       = R"(e:/Data/Feature/GloVe/glove-100/glove-100_base.fvecs)";
-  auto queryFile        = R"(e:/Data/Feature/GloVe/glove-100/glove-100_query.fvecs)";
-  auto groundtruthFile  = R"(e:/Data/Feature/GloVe/glove-100/glove-100_groundtruth.ivecs)";
-  auto indexPath        = R"(e:/Data/Feature/GloVe/NGT/onng in15 out155 noTable (anng K200 eps1.1))";
-  std::vector<float> exploration_coefficients = { 0.04f, 0.05f, 0.06f, 0.07f, 0.08f, 0.09f, 0.1f }; 
+  // // GloVe
+  // auto queryFile        = R"(e:/Data/Feature/GloVe/glove-100/glove-100_query.fvecs)";
+  // auto groundtruthFile  = R"(e:/Data/Feature/GloVe/glove-100/glove-100_groundtruth.ivecs)";
+  // auto indexPath        = R"(e:/Data/Feature/GloVe/NGT/onng in15 out155 noTable (anng K200 eps1.1))";
+  // std::vector<float> exploration_coefficients = { 0.05f, 0.06f, 0.07f, 0.08f, 0.09f, 0.1f }; 
+
+  // Enron
+  // auto queryFile        = R"(e:/Data/Feature/Enron/enron/enron_query.fvecs)";
+  // auto groundtruthFile  = R"(e:/Data/Feature/Enron/enron/enron_groundtruth_top1000.ivecs)";
+  // auto indexPath        = R"(e:/Data/Feature/Enron/NGT/onng in20 out100 noTable (anng K200 eps1.1))";
+  // // std::vector<float> exploration_coefficients = {0.015f, 0.016f, 0.017f, 0.018f, 0.02f, 0.03f, 0.05f}; // TOP20
+  // std::vector<float> exploration_coefficients = {0.01f, 0.011f, 0.012f, 0.013f, 0.014f, 0.015f, 0.018f, 0.03f};
+  // // std::vector<float> exploration_coefficients = {0.015f, 0.016f, 0.017f, 0.018f, 0.019f, 0.02f, 0.021f, 0.022f, 0.023f, 0.024f, 0.025f, 0.026f, 0.027f, 0.028f, 0.029f, 0.03f, 0.05f};
+  // K = 100;
+  // repeat_test = 20;
+
+  // // Audio
+  // auto queryFile        = R"(e:/Data/Feature/Audio/audio/audio_query.fvecs)";
+  // auto groundtruthFile  = R"(e:/Data/Feature/Audio/audio/audio_groundtruth_top1000.ivecs)";
+  // auto indexPath        = R"(e:/Data/Feature/Audio/NGT/onng in40 out100 noTable (anng K200 eps1.1))";
+  // std::vector<float> exploration_coefficients = {0.00f, 0.01f, 0.02f, 0.03f, 0.035f, 0.04f, 0.05f, 0.07f};
+  // K = 100;
+  // repeat_test = 50;
+
+
+  // Deep1M
+  auto queryFile        = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_query.fvecs)";
+  auto groundtruthFile  = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_groundtruth.ivecs)";
+  auto indexPath        = R"(e:/Data/Feature/Deep1M/NGT/in30 out110 noTable (anng K200 eps1.1))";
+  std::vector<float> exploration_coefficients = {0.00f, 0.01f, 0.02f, 0.03f, 0.035f, 0.04f, 0.05f, 0.07f};
+  K = 100;
+  repeat_test = 1;
 
   // convert to txt files
-  // auto objectFile_text  = R"(c:/Data/Feature/SIFT1M/SIFT1M/sift_base.txt)";
+  // auto objectFile       = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_base.fvecs)";
+  // auto objectFile_text  = R"(e:/Data/Feature/SIFT1M/SIFT1M/sift_base.txt)";
   // size_t count, dim;
   // auto data = fvecs_read(objectFile, dim, count);
 
@@ -125,12 +167,10 @@ int main(int argc, char **argv)
 
 
 
-  unsigned K = 100;
-  unsigned seed = 161803398;
-  srand(seed);
 
 
-  std::cout << "Load index" << std::endl;
+
+  std::cout << "Load index (readOnly=" << readOnly << ")" << std::endl;
   auto index = NGT::Index(indexPath, readOnly);
   NGT::Property	property;
   index.getProperty(property);
@@ -177,39 +217,41 @@ int main(int argc, char **argv)
   std::cout << "Actual memory usage: " << getCurrentRSS() / 1000000 << " Mb, Max memory usage: " << getPeakRSS() / 1000000 << " Mb after loading query data" << std::endl;
 
 
-  std::cout << "Evaluate graph " << std::endl;
+  std::cout << "Evaluate graph with TOP" << K << std::endl;
   for (float exploration_coefficient : exploration_coefficients) {
 
 
     auto time_begin = std::chrono::steady_clock::now();
 
-    size_t correct = 0;
-    for (unsigned i = 0; i < query_num; i++) {
-      auto query = std::vector(query_data.get() + i * query_dim, query_data.get() + i * query_dim + query_dim);
-      NGT::SearchQuery		sc(query);
-      NGT::ObjectDistances	objects;
-      sc.setResults(&objects);
-      sc.setSize(K);
-      sc.setEpsilon(exploration_coefficient);
-      //sc.setExpectedAccuracy(0.7f); // needs accuracy table in the graph files
+    size_t correct = 0;    
+    for (unsigned t = 0; t < repeat_test; t++) {
+      for (unsigned i = 0; i < query_num; i++) {
+        auto query = std::vector(query_data.get() + i * query_dim, query_data.get() + i * query_dim + query_dim);
+        NGT::SearchQuery		sc(query);
+        NGT::ObjectDistances	objects;
+        sc.setResults(&objects);
+        sc.setSize(K);
+        sc.setEpsilon(exploration_coefficient);
+        //sc.setExpectedAccuracy(0.7f); // needs accuracy table in the graph file
 
-      if(treeDisabled)
-        index.searchUsingOnlyGraph(sc);
-      else
-        index.search(sc);
+        if(treeDisabled)
+          index.searchUsingOnlyGraph(sc);
+        else
+          index.search(sc);
 
-      // compare answer with ann
-      auto answer = answers[i];
-      for (size_t r = 0; r < K; r++)
-        if (answer.find(objects[r].id - 1) != answer.end()) correct++; // all ids in the index to high by 1 value
+        // compare answer with ann
+        auto answer = answers[i];
+        for (size_t r = 0; r < K; r++)
+          if (answer.find(objects[r].id - 1) != answer.end()) correct++; // all ids in the index to high by 1 value
+      }
     }
 
     auto time_end = std::chrono::steady_clock::now();
-    auto time_us_per_query = (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count()) / query_num;
-    auto recall = 1.0f * correct / (query_num * K);
-    std::cout << "exploration_coefficient " << exploration_coefficient << ", recall " << recall << ", time_us_per_query " << time_us_per_query << std::endl;
-    if (recall > 1.0)
-      break;
+    auto time_us_per_query = (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count()) / (query_num * repeat_test);
+    auto recall = 1.0f * correct / repeat_test / (query_num * K);
+    std::cout << string_format("exploration_coefficient %.3f, recall %.4f, time_us_per_query %8d \n", exploration_coefficient, recall, time_us_per_query);
+    // if (recall > 1.0)
+    //   break;
   }
 
   return 0;
