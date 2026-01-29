@@ -1,4 +1,5 @@
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_BINARY_DIR}/NGT/defines.h)
+option(NGT_GENERATE_VERSION_DEFS "Generate version_defs.h" OFF)
 
 set(NGT_SOURCES
     ArrayFile.cpp
@@ -36,12 +37,14 @@ if(NOT NGT_MARCH_NATIVE_DISABLED)
     target_compile_options(ngtstatic PUBLIC $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-march=native>)
 endif()
 
-add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/NGT/version_defs.h"
-    DEPENDS ${NGT_SOURCES}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/NGT/
-    COMMAND ${PROJECT_SOURCE_DIR}/utils/mk_version_defs_h.sh ${PROJECT_SOURCE_DIR} version_defs.h)
-target_sources(ngtstatic PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/NGT/version_defs.h")
+if(NGT_GENERATE_VERSION_DEFS)
+    add_custom_command(
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/NGT/version_defs.h"
+        DEPENDS ${NGT_SOURCES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/NGT/
+        COMMAND ${PROJECT_SOURCE_DIR}/utils/mk_version_defs_h.sh ${PROJECT_SOURCE_DIR} version_defs.h)
+    target_sources(ngtstatic PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/NGT/version_defs.h")
+endif()
 
 add_library(ngt SHARED ${NGT_SOURCES})
 set_target_properties(ngt PROPERTIES VERSION ${ngt_VERSION})

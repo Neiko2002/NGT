@@ -1,13 +1,11 @@
 
-#include <assert.h>
-
+#include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 
 #include "NGT/GraphOptimizer.h"
 #include "NGT/Index.h"
-
 
 /*****************************************************
  * I/O functions for fvecs and ivecs
@@ -425,8 +423,8 @@ int main(int argc, char** argv) {
     // Deep1M
     auto anngIndexPath = R"(e:/Data/Feature/Deep1M/NGT/anng K200 eps1.1)";
     auto rnngIndexPath = R"(e:/Data/Feature/Deep1M/NGT/rnng K200 eps1.1)";
-    auto onngIndexPath = R"(e:/Data/Feature/Deep1M/NGT/in30 out110 noTable (anng K200 eps1.1)) again";
-  auto objectFile       = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_base.fvecs)";
+    auto onngIndexPath = R"delim(e:/Data/Feature/Deep1M/NGT/in30 out110 noTable (anng K200 eps1.1) again)delim";
+    auto objectFile = R"(e:/Data/Feature/Deep1M/deep1m/deep1m_base.fvecs)";
 
     auto threadNumber = 1;
 
