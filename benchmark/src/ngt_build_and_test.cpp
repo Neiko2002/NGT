@@ -49,7 +49,7 @@ struct DatasetConfig {
     // ANNS Test Params
     int anns_k = 100;
     int anns_repeat = 1;
-    std::vector<float> epsilons = {0.0, 0.01, 0.02, 0.05, 0.10, 0.15, 0.20};
+    std::vector<float> epsilons = {0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09};
     std::vector<int> edge_sizes = {-1};  // -1 means default
 
     // Exploration Params
@@ -76,11 +76,6 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.onng.numOfOutgoingEdges = 10;
         conf.onng.numOfIncomingEdges = 120;
 
-        // ANNS Test
-        conf.anns_k = 100;
-        conf.epsilons = {0.01f, 0.02f, 0.05f, 0.1f, 0.15f, 0.2f};
-        conf.explore_k = 1000;
-
     } else if (dataset_name == DatasetName::DEEP1M) {
         // Deep1M, same as ONNG Paper Table 3 for SIFT1M
         conf.anng.edgeSizeLimitForCreation = 200;
@@ -92,9 +87,6 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         // Deep1M, same as ONNG Paper Table 3 for SIFT1M
         conf.onng.numOfOutgoingEdges = 30;
         conf.onng.numOfIncomingEdges = 110;
-
-        conf.anns_k = 100;
-        conf.explore_k = 1000;
 
     } else if (dataset_name == DatasetName::GLOVE) {
         // ONNG Paper Table 3 on GloVe
@@ -108,9 +100,6 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.onng.numOfOutgoingEdges = 15;
         conf.onng.numOfIncomingEdges = 155;
 
-        conf.anns_k = 100;
-        conf.explore_k = 1000;
-
     } else if (dataset_name == DatasetName::ENRON) {
         // Enron (Weaves ANNG params)
         conf.anng.edgeSizeLimitForCreation = 200;
@@ -123,9 +112,7 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.onng.numOfOutgoingEdges = 20;
         conf.onng.numOfIncomingEdges = 100;
 
-        conf.anns_k = 100;
-        conf.anns_repeat = 10;
-        conf.explore_k = 1000;
+        conf.anns_repeat = 5;
         conf.explore_epsilon = 0.012f;
 
     } else if (dataset_name == DatasetName::AUDIO) {
@@ -140,10 +127,7 @@ static DatasetConfig get_dataset_config(const DatasetName& dataset_name) {
         conf.onng.numOfOutgoingEdges = 40;
         conf.onng.numOfIncomingEdges = 100;
 
-        conf.anns_k = 100;
         conf.anns_repeat = 10;
-        conf.epsilons = {0.0, 0.01, 0.02, 0.03, 0.05, 0.10, 0.15, 0.20};
-        conf.explore_k = 1000;
     }
 
     return conf;
@@ -329,9 +313,17 @@ static void run_test(const Dataset& ds, const DatasetConfig& conf, const GraphPa
 
     std::filesystem::create_directories(paths.graph_directory());
 
-    if (std::filesystem::exists(log_path)) {
-        log("Log file exists, skipping: %s\n", log_path.c_str());
-        return;
+    bool anng_exists = std::filesystem::exists(anng_path);
+    bool onng_exists = std::filesystem::exists(onng_path);
+    bool log_exists = std::filesystem::exists(log_path);
+
+    if (log_exists) {
+        if (anng_exists && !onng_exists) {
+            log("ANNG exists but ONNG is missing. Resuming and appending log: %s\n", log_path.c_str());
+        } else {
+            log("Log file exists, skipping: %s\n", log_path.c_str());
+            return;
+        }
     }
 
     set_log_file(log_path, true);
@@ -344,15 +336,17 @@ static void run_test(const Dataset& ds, const DatasetConfig& conf, const GraphPa
     size_t rss_before = getProcessCurrentRSS();
     log("Initial Memory Usage: %.2f MB\n", rss_before / (1024.0 * 1024.0));
 
-    size_t mem_before_load = getProcessCurrentRSS();
-    auto base_data = ds.load_base();
-    size_t mem_after_load = getProcessCurrentRSS();
-    log("Base data memory usage: %.2f MB\n", (mem_after_load - mem_before_load) / (1024.0 * 1024.0));
-
     StopW build_timer;
 
     // 1. ANNG
-    run_create_anng(ds, conf.anng, anng_path, base_data);
+    if (!anng_exists) {
+        size_t mem_before_load = getProcessCurrentRSS();
+        auto base_data = ds.load_base();
+        size_t mem_after_load = getProcessCurrentRSS();
+        log("Base data memory usage: %.2f MB\n", (mem_after_load - mem_before_load) / (1024.0 * 1024.0));
+
+        run_create_anng(ds, conf.anng, anng_path, base_data);
+    }
 
     // 2. ONNG
     run_create_onng(anng_path, onng_path, conf.onng);
@@ -391,7 +385,7 @@ int main(int argc, char** argv) {
     log("NGT Benchmark Suite\n");
 
     std::string data_root = DATA_PATH;
-    DatasetName ds_name = DatasetName::ENRON;
+    DatasetName ds_name = DatasetName::ALL;
     bool do_run = true;
 
     if (argc > 1) {
