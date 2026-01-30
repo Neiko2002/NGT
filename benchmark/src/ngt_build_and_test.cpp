@@ -306,7 +306,7 @@ static void run_exploration_test_suite(NGT::Index& index, const Dataset& ds, con
                      conf.explore_epsilon);
 }
 
-static void run_test(const Dataset& ds, const DatasetConfig& conf, const GraphPaths& paths) {
+static void run_test(const Dataset& ds, const DatasetConfig& conf, const GraphPaths& paths, bool only_test = false) {
     std::string anng_path = paths.anng_index_path(conf.anng);
     std::string onng_path = paths.onng_index_path(conf.anng, conf.onng);
     std::string log_path = paths.log_file(conf.anng, conf.onng);
@@ -317,13 +317,20 @@ static void run_test(const Dataset& ds, const DatasetConfig& conf, const GraphPa
     bool onng_exists = std::filesystem::exists(onng_path);
     bool log_exists = std::filesystem::exists(log_path);
 
-    if (log_exists) {
-        if (anng_exists && !onng_exists) {
-            log("ANNG exists but ONNG is missing. Resuming and appending log: %s\n", log_path.c_str());
-        } else {
-            log("Log file exists, skipping: %s\n", log_path.c_str());
-            return;
-        }
+    // Early exit conditions
+    if (only_test && !onng_exists) {
+        log("Error: ONNG index not found for testing at %s\n", onng_path.c_str());
+        return;
+    }
+    if (log_exists && !only_test && !(anng_exists && !onng_exists)) {
+        log("Log file exists, skipping: %s\n", log_path.c_str());
+        return;
+    }
+    // Log the mode we're running in
+    if (only_test) {
+        log("Running in ONLY TEST mode. Appending log: %s\n", log_path.c_str());
+    } else if (anng_exists && !onng_exists) {
+        log("ANNG exists but ONNG is missing. Resuming and appending log: %s\n", log_path.c_str());
     }
 
     set_log_file(log_path, true);
@@ -338,21 +345,23 @@ static void run_test(const Dataset& ds, const DatasetConfig& conf, const GraphPa
 
     StopW build_timer;
 
-    // 1. ANNG
-    if (!anng_exists) {
-        size_t mem_before_load = getProcessCurrentRSS();
-        auto base_data = ds.load_base();
-        size_t mem_after_load = getProcessCurrentRSS();
-        log("Base data memory usage: %.2f MB\n", (mem_after_load - mem_before_load) / (1024.0 * 1024.0));
+    if (!only_test) {
+        // 1. ANNG
+        if (!anng_exists) {
+            size_t mem_before_load = getProcessCurrentRSS();
+            auto base_data = ds.load_base();
+            size_t mem_after_load = getProcessCurrentRSS();
+            log("Base data memory usage: %.2f MB\n", (mem_after_load - mem_before_load) / (1024.0 * 1024.0));
 
-        run_create_anng(ds, conf.anng, anng_path, base_data);
+            run_create_anng(ds, conf.anng, anng_path, base_data);
+        }
+
+        // 2. ONNG
+        run_create_onng(anng_path, onng_path, conf.onng);
+
+        double total_build_time = build_timer.getElapsedTimeMicro() / 1000000.0;
+        log("Total Graph Construction Time: %.2f s\n", total_build_time);
     }
-
-    // 2. ONNG
-    run_create_onng(anng_path, onng_path, conf.onng);
-
-    double total_build_time = build_timer.getElapsedTimeMicro() / 1000000.0;
-    log("Total Graph Construction Time: %.2f s\n", total_build_time);
 
     // 3. Test
     log("Loading ONNG for testing: %s\n", onng_path.c_str());
@@ -386,13 +395,23 @@ int main(int argc, char** argv) {
 
     std::string data_root = DATA_PATH;
     DatasetName ds_name = DatasetName::ALL;
-    bool do_run = true;
+    bool only_test = false;
 
-    if (argc > 1) {
-        DatasetName params_ds = DatasetName::from_string(argv[1]);
-        if (params_ds.is_valid()) ds_name = params_ds;
-
-        if (argc > 2) data_root = argv[2];
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--only-test") {
+            only_test = true;
+        } else if (arg.find("--") == 0) {
+            // Other flags?
+        } else {
+            // Must be dataset or path
+            DatasetName params_ds = DatasetName::from_string(arg);
+            if (params_ds.is_valid()) {
+                ds_name = params_ds;
+            } else {
+                data_root = arg;
+            }
+        }
     }
 
     if (ds_name == DatasetName::ALL) {
@@ -400,13 +419,13 @@ int main(int argc, char** argv) {
             Dataset ds(name, data_root);
             auto conf = get_dataset_config(name);
             GraphPaths paths(ds);
-            run_test(ds, conf, paths);
+            run_test(ds, conf, paths, only_test);
         }
     } else {
         Dataset ds(ds_name, data_root);
         auto conf = get_dataset_config(ds_name);
         GraphPaths paths(ds);
-        run_test(ds, conf, paths);
+        run_test(ds, conf, paths, only_test);
     }
 
     return 0;
